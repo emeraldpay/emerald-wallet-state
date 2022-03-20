@@ -1,0 +1,16 @@
+[package]
+name = "emerald-wallet-state"
+version = "0.1.0"
+edition = "2021"
+license = "Apache2"
+
+[dependencies]
+chrono = "0.4"
+uuid = "0.8"
+sled = "0.34"
+protobuf = { version = "2.27", features = ["with-bytes"] }
+enum-display-derive = "0.1"
+fs_extra = "1.2"
+
+[dev-dependencies]
+tempdir = "0.3"
