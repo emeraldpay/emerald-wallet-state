@@ -4,6 +4,7 @@ use uuid::Uuid;
 use crate::errors::StateError;
 use crate::proto::transactions::Transaction;
 
+#[derive(Debug, Clone)]
 /// Reference to a wallet or its part
 pub enum WalletRef {
     /// Whole wallet with all its entries
@@ -12,6 +13,7 @@ pub enum WalletRef {
     SelectedEntry(Uuid, u32),
 }
 
+#[derive(Debug, Clone)]
 /// Reference to an address
 pub enum AddressRef {
     /// A single address, represented as a string. Note that it's case sensitive, and for Ethereum
@@ -21,6 +23,7 @@ pub enum AddressRef {
     Xpub(String, u32, u32),
 }
 
+#[derive(Debug, Clone)]
 /// Transactions Query Filter to select which transactions are accepted.
 /// It's _AND_ type of filter between groups, i.e. all of the non-empty criteria are required, but
 /// each of the group may have different acceptance logic.
@@ -38,6 +41,7 @@ pub struct Filter {
     pub before: Option<DateTime<Utc>>,
 }
 
+#[derive(Debug, Clone)]
 /// Pagination options
 pub struct PageQuery {
     /// Limit of the page size
@@ -46,6 +50,7 @@ pub struct PageQuery {
     pub cursor: Option<Cursor>,
 }
 
+#[derive(Debug, Clone)]
 /// Result of the query
 pub struct PageResult {
     /// Found transactions
@@ -54,6 +59,7 @@ pub struct PageResult {
     pub cursor: Option<Cursor>,
 }
 
+#[derive(Debug, Clone)]
 pub struct Cursor {
     pub offset: u64,
 }
@@ -144,7 +150,7 @@ pub trait Transactions {
     ///
     /// Update a new transactions. Update may be a new transactions or a new state to an existing
     /// Ex. initially a tx added with basic details only, just for future reference, and then updated when it changed
-    fn update(&self, transactions: Vec<Transaction>, sync: DateTime<Utc>) -> Result<(), StateError>;
+    fn submit(&self, transactions: Vec<Transaction>, sync: DateTime<Utc>) -> Result<(), StateError>;
 
     ///
     /// Remove transaction from index

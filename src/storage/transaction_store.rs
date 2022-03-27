@@ -149,13 +149,11 @@ impl Transactions for TransactionsAccess {
 
         while !done {
             let next = iter.next();
-            println!("next result {}", next.is_some());
             match next {
                 Some(x) => match x {
                     Ok(v) => {
                         let txkey = v.1.to_vec();
                         let txkey = String::from_utf8(txkey).unwrap();
-                        println!("tx key {}", txkey);
                         let unprocessed = processed.insert(txkey.clone());
                         if unprocessed {
                             if let Some(tx) = self.get_tx_by_key(txkey) {
@@ -187,16 +185,14 @@ impl Transactions for TransactionsAccess {
         self.get_tx_by_key(key)
     }
 
-    fn update(&self, transactions: Vec<proto_Transaction>, _: DateTime<Utc>) -> Result<(), StateError> {
+    fn submit(&self, transactions: Vec<proto_Transaction>, _: DateTime<Utc>) -> Result<(), StateError> {
         let mut batch = Batch::default();
         for tx in transactions {
             if let Ok(tx_bytes) = tx.write_to_bytes() {
                 let tx_id = tx.tx_id.clone();
                 let tx_key = TransactionsAccess::get_key(tx.blockchain.value() as u32, tx_id);
                 let indexes: Vec<String> = tx.get_index_keys();
-                println!("index {} with {:?}", tx_key, indexes);
                 for idx in indexes {
-                    println!("insert into index {}", idx);
                     batch.insert(idx.as_bytes(), tx_key.as_bytes());
                 }
                 batch.insert(tx_key.as_bytes(), tx_bytes);
@@ -229,7 +225,6 @@ impl Transactions for TransactionsAccess {
                         Ok(v) => {
                             let txkey = v.1.to_vec();
                             let txkey = String::from_utf8(txkey).unwrap();
-                            println!("tx key {}", txkey);
                             let unprocessed = processed.insert(txkey.clone());
                             if unprocessed {
                                 if let Some(tx) = self.get_tx_by_key(txkey) {
@@ -317,7 +312,7 @@ mod tests {
         change1.address = "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48".to_string();
         tx.changes.push(change1);
 
-        transactions.update(vec![tx.clone()], Utc::now()).expect("not saved");
+        transactions.submit(vec![tx.clone()], Utc::now()).expect("not saved");
 
         let results = transactions.query(Filter::default(), PageQuery::default()).expect("queried");
         assert_eq!(results.transactions.len(), 1);
@@ -341,7 +336,7 @@ mod tests {
         change1.address = "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48".to_string();
         tx.changes.push(change1);
 
-        transactions.update(vec![tx.clone()], Utc::now()).expect("not saved");
+        transactions.submit(vec![tx.clone()], Utc::now()).expect("not saved");
 
         let results = transactions.query(Filter::default(), PageQuery::default()).expect("queried");
         assert_eq!(results.transactions.len(), 1);
@@ -377,7 +372,7 @@ mod tests {
         change1.address = "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48".to_string();
         tx2.changes.push(change1);
 
-        transactions.update(vec![tx1.clone(), tx2.clone()], Utc::now()).expect("not saved");
+        transactions.submit(vec![tx1.clone(), tx2.clone()], Utc::now()).expect("not saved");
 
         let results = transactions.query(Filter::default(), PageQuery::default()).expect("query data");
         assert_eq!(results.transactions.len(), 2);
@@ -412,7 +407,7 @@ mod tests {
         change1.address = "0x6218b36c1d19d4a2e9eb0ce3606eb48a0b86991c".to_string();
         tx2.changes.push(change1);
 
-        transactions.update(vec![tx1.clone(), tx2.clone()], Utc::now()).expect("not saved");
+        transactions.submit(vec![tx1.clone(), tx2.clone()], Utc::now()).expect("not saved");
 
         let count = transactions.get_count(Filter::default()).expect("query count");
         assert_eq!(count, 2);
