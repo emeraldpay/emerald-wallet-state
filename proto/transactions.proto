@@ -56,7 +56,7 @@ message Change {
   string asset = 6;
   // note that the amount may be a negative number
   string amount = 7;
-  Change change_type = 8;
+  ChangeType change_type = 8;
 
   enum ChangeType {
     UNSPECIFIED = 0;
