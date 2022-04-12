@@ -6,9 +6,11 @@ use chrono::{DateTime, Utc};
 use protobuf::{Message, ProtobufEnum};
 use sled::{Batch, Db};
 use uuid::Uuid;
-use crate::access::transactions::{Filter, PageQuery, PageResult, Transactions, WalletRef};
+use crate::access::transactions::{Filter, Transactions, WalletRef};
+use crate::access::pagination::{PageResult, PageQuery};
 use crate::errors::StateError;
-use crate::proto::transactions::{Transaction as proto_Transaction};
+use crate::proto::transactions::{Transaction as proto_Transaction, Transaction};
+use crate::storage::indexing::{IndexedValue, QueryRanges, IndexConvert, IndexEncoding};
 
 ///
 /// # Storage:
@@ -22,15 +24,6 @@ use crate::proto::transactions::{Transaction as proto_Transaction};
 /// - `2/<WALLET_ID>/<TIMESTAMP>`
 ///
 ///
-
-
-pub trait IndexedValue {
-    fn get_index_keys(&self) -> Vec<String>;
-}
-
-pub trait QueryRanges {
-    fn get_index_bounds(&self) -> (String, String);
-}
 
 enum IndexType {
     // `<WALLET_ID>/<TIMESTAMP>`
@@ -46,25 +39,20 @@ impl IndexType {
             IndexType::ByWallet(_, _) => 2,
         }
     }
+}
 
+impl IndexEncoding for IndexType {
     fn get_index_key(&self) -> String {
         match self {
-            IndexType::ByWallet(wallet_id, ts) => format!("idx:tx:{:}/{:}/{:}", self.get_prefix(), wallet_id, get_desc_timestamp(*ts)),
-            IndexType::Everything(ts) => format!("idx:tx:{:}/{:}", self.get_prefix(), get_desc_timestamp(*ts))
+            IndexType::ByWallet(wallet_id, ts) => format!("idx:tx:{:}/{:}/{:}", self.get_prefix(), wallet_id, IndexConvert::get_desc_timestamp(*ts)),
+            IndexType::Everything(ts) => format!("idx:tx:{:}/{:}", self.get_prefix(), IndexConvert::get_desc_timestamp(*ts))
         }
     }
 }
 
-/// Descending timestamp, because most of the UI supposed to show data from now backward it time
-fn get_desc_timestamp(ts: u64) -> String {
-    // 1_647_313_850_992 - 13 characters
-    format!("D{:#013}", 9_999_999_999_999 - ts)
-}
+impl IndexedValue<IndexType> for proto_Transaction {
 
-impl IndexedValue for proto_Transaction {
-    /// Get index keys for the transaction, i.e. values used to index and query actual data.
-    /// All returned values are mapped to the same tx
-    fn get_index_keys(&self) -> Vec<String> {
+    fn get_index(&self) -> Vec<IndexType> {
         let mut keys: Vec<IndexType> = Vec::new();
         let blockchain: u32 = self.get_blockchain().value() as u32;
 
@@ -89,14 +77,7 @@ impl IndexedValue for proto_Transaction {
             }
         }
 
-        let mut result: Vec<String> = keys
-            .iter()
-            .map(|k| k.get_index_key())
-            .collect();
-
-        result.sort();
-        result.dedup();
-        result
+        keys
     }
 }
 
@@ -138,7 +119,7 @@ impl Transactions for TransactionsAccess {
         todo!()
     }
 
-    fn query(&self, filter: Filter, page: PageQuery) -> Result<PageResult, StateError> {
+    fn query(&self, filter: Filter, page: PageQuery) -> Result<PageResult<Transaction>, StateError> {
         let bounds = filter.get_index_bounds();
         let mut processed = HashSet::new();
         let mut iter = self.db
@@ -173,7 +154,7 @@ impl Transactions for TransactionsAccess {
         }
 
         let result = PageResult {
-            transactions: txes,
+            values: txes,
             cursor: None,
         };
 
@@ -250,22 +231,12 @@ mod tests {
     use std::str::FromStr;
     use chrono::Utc;
     use uuid::Uuid;
-    use crate::access::transactions::{AddressRef, Filter, PageQuery, Transactions, WalletRef};
-    use crate::storage::transaction_store::{get_desc_timestamp, IndexType, IndexedValue};
+    use crate::access::transactions::{AddressRef, Filter, Transactions, WalletRef};
+    use crate::access::pagination::PageQuery;
+    use crate::storage::transaction_store::{IndexType, IndexedValue};
     use crate::proto::transactions::{BlockchainId, Transaction as proto_Transaction, Change as proto_Change};
+    use crate::storage::indexing::IndexEncoding;
     use crate::storage::sled_access::SledStorage;
-
-    #[test]
-    fn format_ts() {
-        let act = get_desc_timestamp(1_647_313_850_992);
-        assert_eq!(act, "D8352686149007");
-    }
-
-    #[test]
-    fn format_zero_ts() {
-        let act = get_desc_timestamp(0);
-        assert_eq!(act, "D9999999999999");
-    }
 
     #[test]
     fn get_index_at_ts() {
@@ -315,8 +286,8 @@ mod tests {
         transactions.submit(vec![tx.clone()], Utc::now()).expect("not saved");
 
         let results = transactions.query(Filter::default(), PageQuery::default()).expect("queried");
-        assert_eq!(results.transactions.len(), 1);
-        assert_eq!(results.transactions.get(0).unwrap().clone(), tx);
+        assert_eq!(results.values.len(), 1);
+        assert_eq!(results.values.get(0).unwrap().clone(), tx);
         assert!(results.cursor.is_none());
     }
 
@@ -339,11 +310,11 @@ mod tests {
         transactions.submit(vec![tx.clone()], Utc::now()).expect("not saved");
 
         let results = transactions.query(Filter::default(), PageQuery::default()).expect("queried");
-        assert_eq!(results.transactions.len(), 1);
+        assert_eq!(results.values.len(), 1);
 
         transactions.forget(100, "0x2f761cbf069962cf3a82ab0d9b11c453e5d0caf4fb6d192624360def7bd1e81b".to_string()).expect("not removed");
         let results = transactions.query(Filter::default(), PageQuery::default()).expect("queried");
-        assert_eq!(results.transactions.len(), 0);
+        assert_eq!(results.values.len(), 0);
     }
 
     #[test]
@@ -375,9 +346,9 @@ mod tests {
         transactions.submit(vec![tx1.clone(), tx2.clone()], Utc::now()).expect("not saved");
 
         let results = transactions.query(Filter::default(), PageQuery::default()).expect("query data");
-        assert_eq!(results.transactions.len(), 2);
-        assert_eq!(results.transactions.get(0).unwrap().clone(), tx2);
-        assert_eq!(results.transactions.get(1).unwrap().clone(), tx1);
+        assert_eq!(results.values.len(), 2);
+        assert_eq!(results.values.get(0).unwrap().clone(), tx2);
+        assert_eq!(results.values.get(1).unwrap().clone(), tx1);
         assert!(results.cursor.is_none());
     }
 

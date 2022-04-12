@@ -1,6 +1,7 @@
 use chrono::{DateTime, Utc};
 use protobuf::ProtobufEnum;
 use uuid::Uuid;
+use crate::access::pagination::{PageQuery, PageResult};
 use crate::errors::StateError;
 use crate::proto::transactions::Transaction;
 
@@ -39,38 +40,6 @@ pub struct Filter {
     pub after: Option<DateTime<Utc>>,
     /// require a transaction known or confirmed before the specified moment
     pub before: Option<DateTime<Utc>>,
-}
-
-#[derive(Debug, Clone)]
-/// Pagination options
-pub struct PageQuery {
-    /// Limit of the page size
-    pub limit: usize,
-    /// Cursor value to start from
-    pub cursor: Option<Cursor>,
-}
-
-#[derive(Debug, Clone)]
-/// Result of the query
-pub struct PageResult {
-    /// Found transactions
-    pub transactions: Vec<Transaction>,
-    /// Cursor to start next page, or None if finished
-    pub cursor: Option<Cursor>,
-}
-
-#[derive(Debug, Clone)]
-pub struct Cursor {
-    pub offset: u64,
-}
-
-impl Default for PageQuery {
-    fn default() -> Self {
-        PageQuery {
-            limit: 100,
-            cursor: None,
-        }
-    }
 }
 
 impl Default for Filter {
@@ -143,7 +112,7 @@ pub trait Transactions {
 
     ///
     /// Find transactions given filter
-    fn query(&self, filter: Filter, page: PageQuery) -> Result<PageResult, StateError>;
+    fn query(&self, filter: Filter, page: PageQuery) -> Result<PageResult<Transaction>, StateError>;
 
     fn get_tx(&self, blockchain: u32, txid: &str) -> Option<Transaction>;
 

@@ -2,6 +2,7 @@ use std::path::PathBuf;
 use std::sync::Arc;
 use sled::{Db};
 use crate::errors::StateError;
+use crate::storage::adressbook_store::AddressBookAccess;
 use crate::storage::transaction_store::{TransactionsAccess};
 
 pub struct SledStorage {
@@ -21,5 +22,9 @@ impl SledStorage {
     /// Open API to access transactions store
     pub fn get_transactions(&self) -> TransactionsAccess {
         return TransactionsAccess { db: self.db.clone() };
+    }
+
+    pub fn get_addressbook(&self) -> AddressBookAccess {
+        return AddressBookAccess { db: self.db.clone() }
     }
 }

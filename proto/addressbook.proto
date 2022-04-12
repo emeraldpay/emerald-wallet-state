@@ -1,0 +1,22 @@
+syntax = "proto3";
+package emerald.state;
+
+message BookItem {
+  string id = 1;
+  Address address = 2;
+  string label = 3;
+  string description = 4;
+  uint32 blockchain = 5;
+  uint64 create_timestamp = 6;
+  uint64 update_timestamp = 7;
+}
+
+message Address {
+  AddressType type = 1;
+  string address = 2;
+
+  enum AddressType {
+    PLAIN = 0;
+    XPUB = 1;
+  }
+}
