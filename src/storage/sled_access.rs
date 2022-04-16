@@ -4,6 +4,7 @@ use sled::{Db};
 use crate::errors::StateError;
 use crate::storage::adressbook_store::AddressBookAccess;
 use crate::storage::transaction_store::{TransactionsAccess};
+use crate::storage::xpubpos_store::XPubPositionAccess;
 
 pub struct SledStorage {
     pub(crate) db: Arc<Db>,
@@ -26,5 +27,9 @@ impl SledStorage {
 
     pub fn get_addressbook(&self) -> AddressBookAccess {
         return AddressBookAccess { db: self.db.clone() }
+    }
+
+    pub fn get_xpub_pos(&self) -> XPubPositionAccess {
+        return XPubPositionAccess { db: self.db.clone() }
     }
 }
