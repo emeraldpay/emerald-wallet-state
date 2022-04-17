@@ -8,6 +8,7 @@ Backend implementation for Store State of the Emerald Wallet.
 ----
 protoc --rust_out=src/proto --proto_path=./proto transactions.proto
 protoc --rust_out=src/proto --proto_path=./proto addressbook.proto
+protoc --rust_out=src/proto --proto_path=./proto internal.proto
 ----
 
 == License

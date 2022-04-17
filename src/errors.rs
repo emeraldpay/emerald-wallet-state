@@ -1,8 +1,11 @@
+use protobuf::ProtobufError;
+
 #[derive(Clone, Debug)]
 pub enum StateError {
     IOError,
     InvalidId,
     InvalidValue(InvalidValueError),
+    CorruptedValue,
 }
 
 #[derive(Clone, Debug)]
@@ -27,5 +30,11 @@ impl From<uuid::Error> for StateError {
 impl From<InvalidValueError> for StateError {
     fn from(e: InvalidValueError) -> Self {
         StateError::InvalidValue(e)
+    }
+}
+
+impl From<ProtobufError> for StateError {
+    fn from(_: ProtobufError) -> Self {
+        StateError::CorruptedValue
     }
 }

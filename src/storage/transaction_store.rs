@@ -9,8 +9,8 @@ use uuid::Uuid;
 use crate::access::transactions::{Filter, Transactions, WalletRef};
 use crate::access::pagination::{PageResult, PageQuery};
 use crate::errors::StateError;
-use crate::proto::transactions::{Transaction as proto_Transaction, Transaction};
-use crate::storage::indexing::{IndexedValue, QueryRanges, IndexConvert, IndexEncoding};
+use crate::proto::transactions::{Transaction as proto_Transaction};
+use crate::storage::indexing::{IndexedValue, QueryRanges, IndexConvert, IndexEncoding, Indexing};
 
 ///
 /// # Storage:
@@ -119,7 +119,7 @@ impl Transactions for TransactionsAccess {
         todo!()
     }
 
-    fn query(&self, filter: Filter, page: PageQuery) -> Result<PageResult<Transaction>, StateError> {
+    fn query(&self, filter: Filter, page: PageQuery) -> Result<PageResult<proto_Transaction>, StateError> {
         let bounds = filter.get_index_bounds();
         let mut processed = HashSet::new();
         let mut iter = self.db
@@ -173,6 +173,7 @@ impl Transactions for TransactionsAccess {
                 let tx_id = tx.tx_id.clone();
                 let tx_key = TransactionsAccess::get_key(tx.blockchain.value() as u32, tx_id);
                 let indexes: Vec<String> = tx.get_index_keys();
+                Indexing::add_backrefs(&indexes, tx_key.clone(), &mut batch)?;
                 for idx in indexes {
                     batch.insert(idx.as_bytes(), tx_key.as_bytes());
                 }
@@ -187,7 +188,7 @@ impl Transactions for TransactionsAccess {
         let mut batch = Batch::default();
         let tx_key = TransactionsAccess::get_key(blockchain, tx_id);
         batch.remove(tx_key.as_bytes());
-        //TODO delete index as well
+        Indexing::remove_backref(tx_key, self.db.clone(), &mut batch)?;
         self.db.apply_batch(batch)
             .map_err(|e| StateError::from(e))
     }
@@ -315,6 +316,9 @@ mod tests {
         transactions.forget(100, "0x2f761cbf069962cf3a82ab0d9b11c453e5d0caf4fb6d192624360def7bd1e81b".to_string()).expect("not removed");
         let results = transactions.query(Filter::default(), PageQuery::default()).expect("queried");
         assert_eq!(results.values.len(), 0);
+
+        let db_size = access.db.scan_prefix("").count();
+        assert_eq!(db_size, 0);
     }
 
     #[test]

@@ -9,7 +9,7 @@ use crate::access::addressbook::{AddressBook, Filter};
 use crate::access::pagination::{PageQuery, PageResult};
 use crate::errors::StateError;
 use crate::proto::addressbook::{BookItem as proto_BookItem};
-use crate::storage::indexing::{IndexConvert, IndexedValue, IndexEncoding, QueryRanges};
+use crate::storage::indexing::{IndexConvert, IndexedValue, IndexEncoding, Indexing, QueryRanges};
 
 const PREFIX_KEY: &'static str = "addrbook:";
 const PREFIX_IDX: &'static str = "idx:addrbook:";
@@ -155,7 +155,7 @@ impl AddressBook for AddressBookAccess {
                 ids.push(id);
                 let item_key = AddressBookAccess::get_key(id);
                 let indexes: Vec<String> = item.get_index_keys();
-
+                Indexing::add_backrefs(&indexes, item_key.clone(), &mut batch)?;
                 for idx in indexes {
                     batch.insert(idx.as_bytes(), item_key.as_bytes());
                 }
@@ -171,7 +171,7 @@ impl AddressBook for AddressBookAccess {
         let mut batch = Batch::default();
         let item_key = AddressBookAccess::get_key(id);
         batch.remove(item_key.as_bytes());
-        //TODO delete index as well
+        Indexing::remove_backref(item_key, self.db.clone(), &mut batch)?;
         self.db.apply_batch(batch)
             .map_err(|e| StateError::from(e))
     }

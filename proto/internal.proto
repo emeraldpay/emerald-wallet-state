@@ -1,0 +1,6 @@
+syntax = "proto3";
+package emerald.state;
+
+message Indexes {
+  repeated string keys = 1;
+}
