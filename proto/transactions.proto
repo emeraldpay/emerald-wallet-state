@@ -4,14 +4,13 @@ package emerald.state;
 message Transaction {
   BlockchainId blockchain = 1;
   string tx_id = 2;
-  bool own = 3;
-  uint64 since_timestamp = 4;
-  uint64 sync_timestamp = 5;
-  uint64 confirm_timestamp = 6;
-  State state = 7;
-  BlockRef block = 8;
-  Status status = 9;
-  repeated Change changes = 10;
+  uint64 since_timestamp = 3;
+  uint64 sync_timestamp = 4;
+  uint64 confirm_timestamp = 5;
+  State state = 6;
+  BlockRef block = 7;
+  Status status = 8;
+  repeated Change changes = 9;
 }
 
 message BlockRef {
@@ -48,15 +47,14 @@ enum Status {
 }
 
 message Change {
-  bool own = 1;
-  string wallet_id = 2;
-  uint32 entry_id = 3;
-  string address = 4;
-  string hd_path = 5;
-  string asset = 6;
+  string wallet_id = 1;
+  uint32 entry_id = 2;
+  string address = 3;
+  string hd_path = 4;
+  string asset = 5;
   // note that the amount may be a negative number
-  string amount = 7;
-  ChangeType change_type = 8;
+  string amount = 6;
+  ChangeType change_type = 7;
 
   enum ChangeType {
     UNSPECIFIED = 0;
