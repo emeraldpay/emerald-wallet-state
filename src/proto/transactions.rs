@@ -1161,6 +1161,242 @@ impl ::protobuf::reflect::ProtobufValue for Change_ChangeType {
     }
 }
 
+#[derive(PartialEq,Clone,Default)]
+pub struct Cursor {
+    // message fields
+    pub address: ::std::string::String,
+    pub value: ::std::string::String,
+    pub ts: u64,
+    // special fields
+    pub unknown_fields: ::protobuf::UnknownFields,
+    pub cached_size: ::protobuf::CachedSize,
+}
+
+impl<'a> ::std::default::Default for &'a Cursor {
+    fn default() -> &'a Cursor {
+        <Cursor as ::protobuf::Message>::default_instance()
+    }
+}
+
+impl Cursor {
+    pub fn new() -> Cursor {
+        ::std::default::Default::default()
+    }
+
+    // string address = 1;
+
+
+    pub fn get_address(&self) -> &str {
+        &self.address
+    }
+    pub fn clear_address(&mut self) {
+        self.address.clear();
+    }
+
+    // Param is passed by value, moved
+    pub fn set_address(&mut self, v: ::std::string::String) {
+        self.address = v;
+    }
+
+    // Mutable pointer to the field.
+    // If field is not initialized, it is initialized with default value first.
+    pub fn mut_address(&mut self) -> &mut ::std::string::String {
+        &mut self.address
+    }
+
+    // Take field
+    pub fn take_address(&mut self) -> ::std::string::String {
+        ::std::mem::replace(&mut self.address, ::std::string::String::new())
+    }
+
+    // string value = 2;
+
+
+    pub fn get_value(&self) -> &str {
+        &self.value
+    }
+    pub fn clear_value(&mut self) {
+        self.value.clear();
+    }
+
+    // Param is passed by value, moved
+    pub fn set_value(&mut self, v: ::std::string::String) {
+        self.value = v;
+    }
+
+    // Mutable pointer to the field.
+    // If field is not initialized, it is initialized with default value first.
+    pub fn mut_value(&mut self) -> &mut ::std::string::String {
+        &mut self.value
+    }
+
+    // Take field
+    pub fn take_value(&mut self) -> ::std::string::String {
+        ::std::mem::replace(&mut self.value, ::std::string::String::new())
+    }
+
+    // uint64 ts = 3;
+
+
+    pub fn get_ts(&self) -> u64 {
+        self.ts
+    }
+    pub fn clear_ts(&mut self) {
+        self.ts = 0;
+    }
+
+    // Param is passed by value, moved
+    pub fn set_ts(&mut self, v: u64) {
+        self.ts = v;
+    }
+}
+
+impl ::protobuf::Message for Cursor {
+    fn is_initialized(&self) -> bool {
+        true
+    }
+
+    fn merge_from(&mut self, is: &mut ::protobuf::CodedInputStream<'_>) -> ::protobuf::ProtobufResult<()> {
+        while !is.eof()? {
+            let (field_number, wire_type) = is.read_tag_unpack()?;
+            match field_number {
+                1 => {
+                    ::protobuf::rt::read_singular_proto3_string_into(wire_type, is, &mut self.address)?;
+                },
+                2 => {
+                    ::protobuf::rt::read_singular_proto3_string_into(wire_type, is, &mut self.value)?;
+                },
+                3 => {
+                    if wire_type != ::protobuf::wire_format::WireTypeVarint {
+                        return ::std::result::Result::Err(::protobuf::rt::unexpected_wire_type(wire_type));
+                    }
+                    let tmp = is.read_uint64()?;
+                    self.ts = tmp;
+                },
+                _ => {
+                    ::protobuf::rt::read_unknown_or_skip_group(field_number, wire_type, is, self.mut_unknown_fields())?;
+                },
+            };
+        }
+        ::std::result::Result::Ok(())
+    }
+
+    // Compute sizes of nested messages
+    #[allow(unused_variables)]
+    fn compute_size(&self) -> u32 {
+        let mut my_size = 0;
+        if !self.address.is_empty() {
+            my_size += ::protobuf::rt::string_size(1, &self.address);
+        }
+        if !self.value.is_empty() {
+            my_size += ::protobuf::rt::string_size(2, &self.value);
+        }
+        if self.ts != 0 {
+            my_size += ::protobuf::rt::value_size(3, self.ts, ::protobuf::wire_format::WireTypeVarint);
+        }
+        my_size += ::protobuf::rt::unknown_fields_size(self.get_unknown_fields());
+        self.cached_size.set(my_size);
+        my_size
+    }
+
+    fn write_to_with_cached_sizes(&self, os: &mut ::protobuf::CodedOutputStream<'_>) -> ::protobuf::ProtobufResult<()> {
+        if !self.address.is_empty() {
+            os.write_string(1, &self.address)?;
+        }
+        if !self.value.is_empty() {
+            os.write_string(2, &self.value)?;
+        }
+        if self.ts != 0 {
+            os.write_uint64(3, self.ts)?;
+        }
+        os.write_unknown_fields(self.get_unknown_fields())?;
+        ::std::result::Result::Ok(())
+    }
+
+    fn get_cached_size(&self) -> u32 {
+        self.cached_size.get()
+    }
+
+    fn get_unknown_fields(&self) -> &::protobuf::UnknownFields {
+        &self.unknown_fields
+    }
+
+    fn mut_unknown_fields(&mut self) -> &mut ::protobuf::UnknownFields {
+        &mut self.unknown_fields
+    }
+
+    fn as_any(&self) -> &dyn (::std::any::Any) {
+        self as &dyn (::std::any::Any)
+    }
+    fn as_any_mut(&mut self) -> &mut dyn (::std::any::Any) {
+        self as &mut dyn (::std::any::Any)
+    }
+    fn into_any(self: ::std::boxed::Box<Self>) -> ::std::boxed::Box<dyn (::std::any::Any)> {
+        self
+    }
+
+    fn descriptor(&self) -> &'static ::protobuf::reflect::MessageDescriptor {
+        Self::descriptor_static()
+    }
+
+    fn new() -> Cursor {
+        Cursor::new()
+    }
+
+    fn descriptor_static() -> &'static ::protobuf::reflect::MessageDescriptor {
+        static descriptor: ::protobuf::rt::LazyV2<::protobuf::reflect::MessageDescriptor> = ::protobuf::rt::LazyV2::INIT;
+        descriptor.get(|| {
+            let mut fields = ::std::vec::Vec::new();
+            fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeString>(
+                "address",
+                |m: &Cursor| { &m.address },
+                |m: &mut Cursor| { &mut m.address },
+            ));
+            fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeString>(
+                "value",
+                |m: &Cursor| { &m.value },
+                |m: &mut Cursor| { &mut m.value },
+            ));
+            fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeUint64>(
+                "ts",
+                |m: &Cursor| { &m.ts },
+                |m: &mut Cursor| { &mut m.ts },
+            ));
+            ::protobuf::reflect::MessageDescriptor::new_pb_name::<Cursor>(
+                "Cursor",
+                fields,
+                file_descriptor_proto()
+            )
+        })
+    }
+
+    fn default_instance() -> &'static Cursor {
+        static instance: ::protobuf::rt::LazyV2<Cursor> = ::protobuf::rt::LazyV2::INIT;
+        instance.get(Cursor::new)
+    }
+}
+
+impl ::protobuf::Clear for Cursor {
+    fn clear(&mut self) {
+        self.address.clear();
+        self.value.clear();
+        self.ts = 0;
+        self.unknown_fields.clear();
+    }
+}
+
+impl ::std::fmt::Debug for Cursor {
+    fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+        ::protobuf::text_format::fmt(self, f)
+    }
+}
+
+impl ::protobuf::reflect::ProtobufValue for Cursor {
+    fn as_ref(&self) -> ::protobuf::reflect::ReflectValueRef {
+        ::protobuf::reflect::ReflectValueRef::Message(self)
+    }
+}
+
 #[derive(Clone,PartialEq,Eq,Debug,Hash)]
 pub enum BlockchainId {
     CHAIN_UNSPECIFIED = 0,
@@ -1367,40 +1603,42 @@ static file_descriptor_proto_data: &'static [u8] = b"\
     \x05asset\x12\x16\n\x06amount\x18\x06\x20\x01(\tR\x06amount\x12A\n\x0bch\
     ange_type\x18\x07\x20\x01(\x0e2\x20.emerald.state.Change.ChangeTypeR\nch\
     angeType\"4\n\nChangeType\x12\x0f\n\x0bUNSPECIFIED\x10\0\x12\x0c\n\x08TR\
-    ANSFER\x10\x01\x12\x07\n\x03FEE\x10\x02*\xe4\x01\n\x0cBlockchainId\x12\
-    \x15\n\x11CHAIN_UNSPECIFIED\x10\0\x12\x11\n\rCHAIN_BITCOIN\x10\x01\x12\
-    \x12\n\x0eCHAIN_ETHEREUM\x10d\x12\x1a\n\x16CHAIN_ETHEREUM_CLASSIC\x10e\
-    \x12\x11\n\x0cCHAIN_MORDEN\x10\x91N\x12\x10\n\x0bCHAIN_KOVAN\x10\x92N\
-    \x12\x1a\n\x15CHAIN_TESTNET_BITCOIN\x10\x93N\x12\x11\n\x0cCHAIN_GOERLI\
-    \x10\x95N\x12\x12\n\rCHAIN_ROPSTEN\x10\x96N\x12\x12\n\rCHAIN_RINKEBY\x10\
-    \x97N*N\n\x05State\x12\x0c\n\x08PREPARED\x10\0\x12\r\n\tSUBMITTED\x10\n\
-    \x12\x0c\n\x08REPLACED\x10\x0b\x12\r\n\tCONFIRMED\x10\x0c\x12\x0b\n\x07D\
-    ROPPED\x10\x14*)\n\x06Status\x12\x0b\n\x07UNKNOWN\x10\0\x12\x06\n\x02OK\
-    \x10\x01\x12\n\n\x06FAILED\x10\x02J\x8b\x11\n\x06\x12\x04\0\0?\x01\n\x08\
-    \n\x01\x0c\x12\x03\0\0\x12\n\x08\n\x01\x02\x12\x03\x01\0\x16\n\n\n\x02\
-    \x04\0\x12\x04\x03\0\r\x01\n\n\n\x03\x04\0\x01\x12\x03\x03\x08\x13\n\x0b\
-    \n\x04\x04\0\x02\0\x12\x03\x04\x02\x1e\n\x0c\n\x05\x04\0\x02\0\x06\x12\
-    \x03\x04\x02\x0e\n\x0c\n\x05\x04\0\x02\0\x01\x12\x03\x04\x0f\x19\n\x0c\n\
-    \x05\x04\0\x02\0\x03\x12\x03\x04\x1c\x1d\n\x0b\n\x04\x04\0\x02\x01\x12\
-    \x03\x05\x02\x13\n\x0c\n\x05\x04\0\x02\x01\x05\x12\x03\x05\x02\x08\n\x0c\
-    \n\x05\x04\0\x02\x01\x01\x12\x03\x05\t\x0e\n\x0c\n\x05\x04\0\x02\x01\x03\
-    \x12\x03\x05\x11\x12\n\x0b\n\x04\x04\0\x02\x02\x12\x03\x06\x02\x1d\n\x0c\
-    \n\x05\x04\0\x02\x02\x05\x12\x03\x06\x02\x08\n\x0c\n\x05\x04\0\x02\x02\
-    \x01\x12\x03\x06\t\x18\n\x0c\n\x05\x04\0\x02\x02\x03\x12\x03\x06\x1b\x1c\
-    \n\x0b\n\x04\x04\0\x02\x03\x12\x03\x07\x02\x1c\n\x0c\n\x05\x04\0\x02\x03\
-    \x05\x12\x03\x07\x02\x08\n\x0c\n\x05\x04\0\x02\x03\x01\x12\x03\x07\t\x17\
-    \n\x0c\n\x05\x04\0\x02\x03\x03\x12\x03\x07\x1a\x1b\n\x0b\n\x04\x04\0\x02\
-    \x04\x12\x03\x08\x02\x1f\n\x0c\n\x05\x04\0\x02\x04\x05\x12\x03\x08\x02\
-    \x08\n\x0c\n\x05\x04\0\x02\x04\x01\x12\x03\x08\t\x1a\n\x0c\n\x05\x04\0\
-    \x02\x04\x03\x12\x03\x08\x1d\x1e\n\x0b\n\x04\x04\0\x02\x05\x12\x03\t\x02\
-    \x12\n\x0c\n\x05\x04\0\x02\x05\x06\x12\x03\t\x02\x07\n\x0c\n\x05\x04\0\
-    \x02\x05\x01\x12\x03\t\x08\r\n\x0c\n\x05\x04\0\x02\x05\x03\x12\x03\t\x10\
-    \x11\n\x0b\n\x04\x04\0\x02\x06\x12\x03\n\x02\x15\n\x0c\n\x05\x04\0\x02\
-    \x06\x06\x12\x03\n\x02\n\n\x0c\n\x05\x04\0\x02\x06\x01\x12\x03\n\x0b\x10\
-    \n\x0c\n\x05\x04\0\x02\x06\x03\x12\x03\n\x13\x14\n\x0b\n\x04\x04\0\x02\
-    \x07\x12\x03\x0b\x02\x14\n\x0c\n\x05\x04\0\x02\x07\x06\x12\x03\x0b\x02\
-    \x08\n\x0c\n\x05\x04\0\x02\x07\x01\x12\x03\x0b\t\x0f\n\x0c\n\x05\x04\0\
-    \x02\x07\x03\x12\x03\x0b\x12\x13\n\x0b\n\x04\x04\0\x02\x08\x12\x03\x0c\
+    ANSFER\x10\x01\x12\x07\n\x03FEE\x10\x02\"H\n\x06Cursor\x12\x18\n\x07addr\
+    ess\x18\x01\x20\x01(\tR\x07address\x12\x14\n\x05value\x18\x02\x20\x01(\t\
+    R\x05value\x12\x0e\n\x02ts\x18\x03\x20\x01(\x04R\x02ts*\xe4\x01\n\x0cBlo\
+    ckchainId\x12\x15\n\x11CHAIN_UNSPECIFIED\x10\0\x12\x11\n\rCHAIN_BITCOIN\
+    \x10\x01\x12\x12\n\x0eCHAIN_ETHEREUM\x10d\x12\x1a\n\x16CHAIN_ETHEREUM_CL\
+    ASSIC\x10e\x12\x11\n\x0cCHAIN_MORDEN\x10\x91N\x12\x10\n\x0bCHAIN_KOVAN\
+    \x10\x92N\x12\x1a\n\x15CHAIN_TESTNET_BITCOIN\x10\x93N\x12\x11\n\x0cCHAIN\
+    _GOERLI\x10\x95N\x12\x12\n\rCHAIN_ROPSTEN\x10\x96N\x12\x12\n\rCHAIN_RINK\
+    EBY\x10\x97N*N\n\x05State\x12\x0c\n\x08PREPARED\x10\0\x12\r\n\tSUBMITTED\
+    \x10\n\x12\x0c\n\x08REPLACED\x10\x0b\x12\r\n\tCONFIRMED\x10\x0c\x12\x0b\
+    \n\x07DROPPED\x10\x14*)\n\x06Status\x12\x0b\n\x07UNKNOWN\x10\0\x12\x06\n\
+    \x02OK\x10\x01\x12\n\n\x06FAILED\x10\x02J\xc8\x12\n\x06\x12\x04\0\0E\x01\
+    \n\x08\n\x01\x0c\x12\x03\0\0\x12\n\x08\n\x01\x02\x12\x03\x01\0\x16\n\n\n\
+    \x02\x04\0\x12\x04\x03\0\r\x01\n\n\n\x03\x04\0\x01\x12\x03\x03\x08\x13\n\
+    \x0b\n\x04\x04\0\x02\0\x12\x03\x04\x02\x1e\n\x0c\n\x05\x04\0\x02\0\x06\
+    \x12\x03\x04\x02\x0e\n\x0c\n\x05\x04\0\x02\0\x01\x12\x03\x04\x0f\x19\n\
+    \x0c\n\x05\x04\0\x02\0\x03\x12\x03\x04\x1c\x1d\n\x0b\n\x04\x04\0\x02\x01\
+    \x12\x03\x05\x02\x13\n\x0c\n\x05\x04\0\x02\x01\x05\x12\x03\x05\x02\x08\n\
+    \x0c\n\x05\x04\0\x02\x01\x01\x12\x03\x05\t\x0e\n\x0c\n\x05\x04\0\x02\x01\
+    \x03\x12\x03\x05\x11\x12\n\x0b\n\x04\x04\0\x02\x02\x12\x03\x06\x02\x1d\n\
+    \x0c\n\x05\x04\0\x02\x02\x05\x12\x03\x06\x02\x08\n\x0c\n\x05\x04\0\x02\
+    \x02\x01\x12\x03\x06\t\x18\n\x0c\n\x05\x04\0\x02\x02\x03\x12\x03\x06\x1b\
+    \x1c\n\x0b\n\x04\x04\0\x02\x03\x12\x03\x07\x02\x1c\n\x0c\n\x05\x04\0\x02\
+    \x03\x05\x12\x03\x07\x02\x08\n\x0c\n\x05\x04\0\x02\x03\x01\x12\x03\x07\t\
+    \x17\n\x0c\n\x05\x04\0\x02\x03\x03\x12\x03\x07\x1a\x1b\n\x0b\n\x04\x04\0\
+    \x02\x04\x12\x03\x08\x02\x1f\n\x0c\n\x05\x04\0\x02\x04\x05\x12\x03\x08\
+    \x02\x08\n\x0c\n\x05\x04\0\x02\x04\x01\x12\x03\x08\t\x1a\n\x0c\n\x05\x04\
+    \0\x02\x04\x03\x12\x03\x08\x1d\x1e\n\x0b\n\x04\x04\0\x02\x05\x12\x03\t\
+    \x02\x12\n\x0c\n\x05\x04\0\x02\x05\x06\x12\x03\t\x02\x07\n\x0c\n\x05\x04\
+    \0\x02\x05\x01\x12\x03\t\x08\r\n\x0c\n\x05\x04\0\x02\x05\x03\x12\x03\t\
+    \x10\x11\n\x0b\n\x04\x04\0\x02\x06\x12\x03\n\x02\x15\n\x0c\n\x05\x04\0\
+    \x02\x06\x06\x12\x03\n\x02\n\n\x0c\n\x05\x04\0\x02\x06\x01\x12\x03\n\x0b\
+    \x10\n\x0c\n\x05\x04\0\x02\x06\x03\x12\x03\n\x13\x14\n\x0b\n\x04\x04\0\
+    \x02\x07\x12\x03\x0b\x02\x14\n\x0c\n\x05\x04\0\x02\x07\x06\x12\x03\x0b\
+    \x02\x08\n\x0c\n\x05\x04\0\x02\x07\x01\x12\x03\x0b\t\x0f\n\x0c\n\x05\x04\
+    \0\x02\x07\x03\x12\x03\x0b\x12\x13\n\x0b\n\x04\x04\0\x02\x08\x12\x03\x0c\
     \x02\x1e\n\x0c\n\x05\x04\0\x02\x08\x04\x12\x03\x0c\x02\n\n\x0c\n\x05\x04\
     \0\x02\x08\x06\x12\x03\x0c\x0b\x11\n\x0c\n\x05\x04\0\x02\x08\x01\x12\x03\
     \x0c\x12\x19\n\x0c\n\x05\x04\0\x02\x08\x03\x12\x03\x0c\x1c\x1d\n\n\n\x02\
@@ -1481,7 +1719,16 @@ static file_descriptor_proto_data: &'static [u8] = b"\
     \x07\x04\x02\x04\0\x02\x01\x01\x12\x03<\x04\x0c\n\x0e\n\x07\x04\x02\x04\
     \0\x02\x01\x02\x12\x03<\x0f\x10\n\r\n\x06\x04\x02\x04\0\x02\x02\x12\x03=\
     \x04\x0c\n\x0e\n\x07\x04\x02\x04\0\x02\x02\x01\x12\x03=\x04\x07\n\x0e\n\
-    \x07\x04\x02\x04\0\x02\x02\x02\x12\x03=\n\x0bb\x06proto3\
+    \x07\x04\x02\x04\0\x02\x02\x02\x12\x03=\n\x0b\n\n\n\x02\x04\x03\x12\x04A\
+    \0E\x01\n\n\n\x03\x04\x03\x01\x12\x03A\x08\x0e\n\x0b\n\x04\x04\x03\x02\0\
+    \x12\x03B\x02\x15\n\x0c\n\x05\x04\x03\x02\0\x05\x12\x03B\x02\x08\n\x0c\n\
+    \x05\x04\x03\x02\0\x01\x12\x03B\t\x10\n\x0c\n\x05\x04\x03\x02\0\x03\x12\
+    \x03B\x13\x14\n\x0b\n\x04\x04\x03\x02\x01\x12\x03C\x02\x13\n\x0c\n\x05\
+    \x04\x03\x02\x01\x05\x12\x03C\x02\x08\n\x0c\n\x05\x04\x03\x02\x01\x01\
+    \x12\x03C\t\x0e\n\x0c\n\x05\x04\x03\x02\x01\x03\x12\x03C\x11\x12\n\x0b\n\
+    \x04\x04\x03\x02\x02\x12\x03D\x02\x10\n\x0c\n\x05\x04\x03\x02\x02\x05\
+    \x12\x03D\x02\x08\n\x0c\n\x05\x04\x03\x02\x02\x01\x12\x03D\t\x0b\n\x0c\n\
+    \x05\x04\x03\x02\x02\x03\x12\x03D\x0e\x0fb\x06proto3\
 ";
 
 static file_descriptor_proto_lazy: ::protobuf::rt::LazyV2<::protobuf::descriptor::FileDescriptorProto> = ::protobuf::rt::LazyV2::INIT;

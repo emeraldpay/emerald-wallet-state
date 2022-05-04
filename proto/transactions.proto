@@ -62,3 +62,9 @@ message Change {
     FEE = 2;
   }
 }
+
+message Cursor {
+  string address = 1;
+  string value = 2;
+  uint64 ts = 3;
+}

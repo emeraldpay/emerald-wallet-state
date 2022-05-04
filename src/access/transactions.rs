@@ -54,6 +54,16 @@ impl Default for Filter {
     }
 }
 
+///
+/// A reference to an external _cursor_ used to fetch updates for an address
+#[derive(Debug, Clone)]
+pub struct RemoteCursor {
+    /// Cursor value
+    pub value: String,
+    /// When the cursor was provided
+    pub since: DateTime<Utc>,
+}
+
 impl Filter {
     /// Checks the filter against the transaction.
     /// Returns `true` if the transaction fits the criteria
@@ -106,11 +116,6 @@ impl Filter {
 
 pub trait Transactions {
     ///
-    /// Check when last server sync was made, to fetch transactions updated since that moment
-    /// The timestamp is provided by server
-    fn get_last_sync(&self, wallet: WalletRef) -> Result<Option<DateTime<Utc>>, StateError>;
-
-    ///
     /// Find transactions given filter
     fn query(&self, filter: Filter, page: PageQuery) -> Result<PageResult<Transaction>, StateError>;
 
@@ -119,7 +124,7 @@ pub trait Transactions {
     ///
     /// Update a new transactions. Update may be a new transactions or a new state to an existing
     /// Ex. initially a tx added with basic details only, just for future reference, and then updated when it changed
-    fn submit(&self, transactions: Vec<Transaction>, sync: DateTime<Utc>) -> Result<(), StateError>;
+    fn submit(&self, transactions: Vec<Transaction>) -> Result<(), StateError>;
 
     ///
     /// Remove transaction from index
@@ -128,6 +133,14 @@ pub trait Transactions {
     ///
     /// Get total count of transactions by given filter
     fn get_count(&self, filter: Filter) -> Result<usize, StateError>;
+
+    ///
+    /// Get current `cursor` for an `address`.
+    fn get_cursor<S: AsRef<str>>(&self, address: S) -> Result<Option<RemoteCursor>, StateError>;
+
+    ///
+    /// Update `cursor` value for an `address`
+    fn set_cursor<S: AsRef<str> + ToString>(&self, address: S, cursor: S) -> Result<(), StateError>;
 }
 
 

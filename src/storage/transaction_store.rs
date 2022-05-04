@@ -2,14 +2,14 @@ use std::collections::HashSet;
 use std::ops::{Deref};
 use std::str::FromStr;
 use std::sync::Arc;
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, TimeZone, Utc};
 use protobuf::{Message, ProtobufEnum};
 use sled::{Batch, Db};
 use uuid::Uuid;
-use crate::access::transactions::{Filter, Transactions, WalletRef};
+use crate::access::transactions::{Filter, RemoteCursor, Transactions, WalletRef};
 use crate::access::pagination::{PageResult, PageQuery};
 use crate::errors::StateError;
-use crate::proto::transactions::{Transaction as proto_Transaction};
+use crate::proto::transactions::{Transaction as proto_Transaction, Cursor as proto_Cursor};
 use crate::storage::indexing::{IndexedValue, QueryRanges, IndexConvert, IndexEncoding, Indexing};
 
 ///
@@ -24,6 +24,10 @@ use crate::storage::indexing::{IndexedValue, QueryRanges, IndexConvert, IndexEnc
 /// - `2/<WALLET_ID>/<TIMESTAMP>`
 ///
 ///
+
+const PREFIX_KEY: &'static str = "tx";
+const PREFIX_IDX: &'static str = "idx:tx";
+const PREFIX_CURSOR: &'static str = "addr_cursor";
 
 enum IndexType {
     // `<WALLET_ID>/<TIMESTAMP>`
@@ -44,8 +48,8 @@ impl IndexType {
 impl IndexEncoding for IndexType {
     fn get_index_key(&self) -> String {
         match self {
-            IndexType::ByWallet(wallet_id, ts) => format!("idx:tx:{:}/{:}/{:}", self.get_prefix(), wallet_id, IndexConvert::get_desc_timestamp(*ts)),
-            IndexType::Everything(ts) => format!("idx:tx:{:}/{:}", self.get_prefix(), IndexConvert::get_desc_timestamp(*ts))
+            IndexType::ByWallet(wallet_id, ts) => format!("{}:{:}/{:}/{:}", PREFIX_IDX, self.get_prefix(), wallet_id, IndexConvert::get_desc_timestamp(*ts)),
+            IndexType::Everything(ts) => format!("{}:{:}/{:}", PREFIX_IDX, self.get_prefix(), IndexConvert::get_desc_timestamp(*ts))
         }
     }
 }
@@ -98,7 +102,7 @@ pub struct TransactionsAccess {
 
 impl TransactionsAccess {
     fn get_key<S: Into<String>>(blockchain: u32, txid: S) -> String {
-        format!("tx:{}/{}", blockchain, txid.into())
+        format!("{}:{}/{}", PREFIX_KEY, blockchain, txid.into())
     }
 
     fn get_tx_by_key(&self, key: String) -> Option<proto_Transaction> {
@@ -115,9 +119,6 @@ impl TransactionsAccess {
 }
 
 impl Transactions for TransactionsAccess {
-    fn get_last_sync(&self, wallet: WalletRef) -> Result<Option<DateTime<Utc>>, StateError> {
-        todo!()
-    }
 
     fn query(&self, filter: Filter, page: PageQuery) -> Result<PageResult<proto_Transaction>, StateError> {
         let bounds = filter.get_index_bounds();
@@ -166,7 +167,7 @@ impl Transactions for TransactionsAccess {
         self.get_tx_by_key(key)
     }
 
-    fn submit(&self, transactions: Vec<proto_Transaction>, _: DateTime<Utc>) -> Result<(), StateError> {
+    fn submit(&self, transactions: Vec<proto_Transaction>) -> Result<(), StateError> {
         let mut batch = Batch::default();
         for tx in transactions {
             if let Ok(tx_bytes) = tx.write_to_bytes() {
@@ -223,6 +224,36 @@ impl Transactions for TransactionsAccess {
             }
         }
         Ok(count)
+    }
+
+    fn get_cursor<S: AsRef<str>>(&self, address: S) -> Result<Option<RemoteCursor>, StateError> {
+        let key = format!("{}:{}", PREFIX_CURSOR, address.as_ref());
+        if let Some(value) = self.db.get(key)? {
+            let cursor = proto_Cursor::parse_from_bytes(value.deref())?;
+            if cursor.value.is_empty() {
+                Ok(None)
+            } else {
+                Ok(Some(RemoteCursor {
+                    value: cursor.value,
+                    since: Utc.timestamp_millis(cursor.ts as i64)
+                }))
+            }
+        } else {
+            Ok(None)
+        }
+    }
+
+    fn set_cursor<S: AsRef<str> + ToString>(&self, address: S, cursor: S) -> Result<(), StateError> {
+        let key = format!("{}:{}", PREFIX_CURSOR, address.as_ref());
+        let mut proto = proto_Cursor::new();
+        proto.set_address(address.to_string());
+        proto.set_ts(Utc::now().naive_utc().timestamp_millis() as u64);
+        proto.set_value(cursor.to_string());
+        let value = proto.write_to_bytes()?;
+        let mut batch = Batch::default();
+        batch.insert(key.as_bytes(), value.as_slice());
+        self.db.apply_batch(batch)
+            .map_err(|e| StateError::from(e))
     }
 }
 
@@ -284,7 +315,7 @@ mod tests {
         change1.address = "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48".to_string();
         tx.changes.push(change1);
 
-        transactions.submit(vec![tx.clone()], Utc::now()).expect("not saved");
+        transactions.submit(vec![tx.clone()]).expect("not saved");
 
         let results = transactions.query(Filter::default(), PageQuery::default()).expect("queried");
         assert_eq!(results.values.len(), 1);
@@ -308,7 +339,7 @@ mod tests {
         change1.address = "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48".to_string();
         tx.changes.push(change1);
 
-        transactions.submit(vec![tx.clone()], Utc::now()).expect("not saved");
+        transactions.submit(vec![tx.clone()]).expect("not saved");
 
         let results = transactions.query(Filter::default(), PageQuery::default()).expect("queried");
         assert_eq!(results.values.len(), 1);
@@ -347,7 +378,7 @@ mod tests {
         change1.address = "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48".to_string();
         tx2.changes.push(change1);
 
-        transactions.submit(vec![tx1.clone(), tx2.clone()], Utc::now()).expect("not saved");
+        transactions.submit(vec![tx1.clone(), tx2.clone()]).expect("not saved");
 
         let results = transactions.query(Filter::default(), PageQuery::default()).expect("query data");
         assert_eq!(results.values.len(), 2);
@@ -382,7 +413,7 @@ mod tests {
         change1.address = "0x6218b36c1d19d4a2e9eb0ce3606eb48a0b86991c".to_string();
         tx2.changes.push(change1);
 
-        transactions.submit(vec![tx1.clone(), tx2.clone()], Utc::now()).expect("not saved");
+        transactions.submit(vec![tx1.clone(), tx2.clone()]).expect("not saved");
 
         let count = transactions.get_count(Filter::default()).expect("query count");
         assert_eq!(count, 2);
@@ -404,5 +435,32 @@ mod tests {
             ..Filter::default()
         }).expect("query count");
         assert_eq!(count, 2);
+    }
+
+    #[test]
+    fn no_cursor_by_default() {
+        let tmp_dir = TempDir::new("create_and_find_tx").unwrap();
+        let access = SledStorage::open(tmp_dir.path().to_path_buf()).unwrap();
+        let transactions = access.get_transactions();
+
+        let act = transactions.get_cursor("0x6218b36c1d19d4a2e9eb0ce3606eb48a0b86991c");
+        assert!(act.is_ok());
+        assert!(act.unwrap().is_none());
+    }
+
+    #[test]
+    fn save_and_provide_cursor() {
+        let tmp_dir = TempDir::new("create_and_find_tx").unwrap();
+        let access = SledStorage::open(tmp_dir.path().to_path_buf()).unwrap();
+        let transactions = access.get_transactions();
+
+        let saved = transactions.set_cursor("0x6218b36c1d19d4a2e9eb0ce3606eb48a0b86991c", "MTA5MjQ5MS81ODE=");
+        assert!(saved.is_ok());
+
+        let act = transactions.get_cursor("0x6218b36c1d19d4a2e9eb0ce3606eb48a0b86991c");
+        assert!(act.is_ok());
+        let act = act.unwrap();
+        assert!(act.is_some());
+        assert_eq!(act.unwrap().value, "MTA5MjQ5MS81ODE=".to_string());
     }
 }

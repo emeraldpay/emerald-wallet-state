@@ -11,8 +11,8 @@ use crate::errors::StateError;
 use crate::proto::addressbook::{BookItem as proto_BookItem};
 use crate::storage::indexing::{IndexConvert, IndexedValue, IndexEncoding, Indexing, QueryRanges};
 
-const PREFIX_KEY: &'static str = "addrbook:";
-const PREFIX_IDX: &'static str = "idx:addrbook:";
+const PREFIX_KEY: &'static str = "addrbook";
+const PREFIX_IDX: &'static str = "idx:addrbook";
 
 enum IndexType {
     // `<LABEL>/<TIMESTAMP>`
