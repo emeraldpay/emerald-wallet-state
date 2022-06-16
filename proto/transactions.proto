@@ -46,15 +46,22 @@ enum Status {
   FAILED = 2;
 }
 
+enum Direction {
+  EARN = 0;
+  SPEND = 1;
+}
+
 message Change {
   string wallet_id = 1;
   uint32 entry_id = 2;
   string address = 3;
   string hd_path = 4;
   string asset = 5;
-  // note that the amount may be a negative number
+  // Positive number encoded as string. For negative transfers use `direction`
   string amount = 6;
   ChangeType change_type = 7;
+  // Direction of transfer
+  Direction direction = 8;
 
   enum ChangeType {
     UNSPECIFIED = 0;
