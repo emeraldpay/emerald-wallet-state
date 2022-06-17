@@ -3,7 +3,7 @@ use protobuf::ProtobufEnum;
 use uuid::Uuid;
 use crate::access::pagination::{PageQuery, PageResult};
 use crate::errors::StateError;
-use crate::proto::transactions::Transaction;
+use crate::proto::transactions::{Transaction, TransactionMeta};
 
 #[derive(Debug, Clone)]
 /// Reference to a wallet or its part
@@ -119,7 +119,18 @@ pub trait Transactions {
     /// Find transactions given filter
     fn query(&self, filter: Filter, page: PageQuery) -> Result<PageResult<Transaction>, StateError>;
 
+    ///
+    /// Get Tx, if exist
     fn get_tx(&self, blockchain: u32, txid: &str) -> Option<Transaction>;
+
+    ///
+    /// Get Transaction user assigned info, such as label. `Ok(None)` if user has no assigned meta for that tx
+    fn get_tx_meta(&self, blockchain: u32, txid: &str) -> Result<Option<TransactionMeta>, StateError>;
+
+    ///
+    /// Set user assigned meta to the transaction. If a value is already exists it gets updated with the new values
+    /// only if the new meta is fresh (i.e. a later timestamp)
+    fn set_tx_meta(&self, value: TransactionMeta) -> Result<TransactionMeta, StateError>;
 
     ///
     /// Update a new transactions. Update may be a new transactions or a new state to an existing

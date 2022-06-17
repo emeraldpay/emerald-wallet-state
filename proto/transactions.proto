@@ -13,6 +13,13 @@ message Transaction {
   repeated Change changes = 9;
 }
 
+message TransactionMeta {
+  uint64 timestamp = 1;
+  BlockchainId blockchain = 2;
+  string tx_id = 3;
+  string label = 4;
+}
+
 message BlockRef {
   uint64 height = 1;
   string block_id = 2;

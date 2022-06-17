@@ -8,8 +8,8 @@ use sled::{Batch, Db};
 use uuid::Uuid;
 use crate::access::transactions::{Filter, RemoteCursor, Transactions, WalletRef};
 use crate::access::pagination::{PageResult, PageQuery};
-use crate::errors::StateError;
-use crate::proto::transactions::{Transaction as proto_Transaction, Cursor as proto_Cursor};
+use crate::errors::{StateError,InvalidValueError};
+use crate::proto::transactions::{Transaction as proto_Transaction, Cursor as proto_Cursor, TransactionMeta as proto_TransactionMeta};
 use crate::storage::indexing::{IndexedValue, QueryRanges, IndexConvert, IndexEncoding, Indexing};
 
 ///
@@ -26,6 +26,7 @@ use crate::storage::indexing::{IndexedValue, QueryRanges, IndexConvert, IndexEnc
 ///
 
 const PREFIX_KEY: &'static str = "tx";
+const PREFIX_KEY_META: &'static str = "txmeta";
 const PREFIX_IDX: &'static str = "idx:tx";
 const PREFIX_CURSOR: &'static str = "addr_cursor";
 
@@ -104,6 +105,9 @@ impl TransactionsAccess {
     fn get_key<S: Into<String>>(blockchain: u32, txid: S) -> String {
         format!("{}:{}/{}", PREFIX_KEY, blockchain, txid.into())
     }
+    fn get_key_meta<S: Into<String>>(blockchain: u32, txid: S) -> String {
+        format!("{}:{}/{}", PREFIX_KEY_META, blockchain, txid.into())
+    }
 
     fn get_tx_by_key(&self, key: String) -> Option<proto_Transaction> {
         match self.db.get(key) {
@@ -165,6 +169,39 @@ impl Transactions for TransactionsAccess {
     fn get_tx(&self, blockchain: u32, txid: &str) -> Option<proto_Transaction> {
         let key = TransactionsAccess::get_key(blockchain, txid);
         self.get_tx_by_key(key)
+    }
+
+    fn get_tx_meta(&self, blockchain: u32, txid: &str) -> Result<Option<proto_TransactionMeta>, StateError> {
+        let key = TransactionsAccess::get_key_meta(blockchain, txid);
+        match self.db.get(key) {
+            Ok(data) => {
+                match data {
+                    Some(b) => Ok(proto_TransactionMeta::parse_from_bytes(b.deref()).ok()),
+                    None => Ok(None)
+                }
+            }
+            Err(_) => Err(StateError::IOError)
+        }
+    }
+
+    fn set_tx_meta(&self, value: proto_TransactionMeta) -> Result<proto_TransactionMeta, StateError> {
+        let blockchain = value.blockchain.value() as u32;
+        let tx_id = value.tx_id.clone();
+        if tx_id.is_empty() {
+            return Err(StateError::InvalidValue(InvalidValueError::Name("tx_id".to_string())))
+        }
+        let existing = self.get_tx_meta(blockchain, tx_id.as_str())?;
+        if let Some(existing_value) = existing {
+            if existing_value.timestamp >= value.timestamp {
+                return Ok(existing_value)
+            }
+        }
+        let key = TransactionsAccess::get_key_meta(blockchain, tx_id);
+        let b = value.write_to_bytes()?;
+        let mut batch = Batch::default();
+        batch.insert(key.as_bytes(), b);
+        self.db.apply_batch(batch)?;
+        Ok(value)
     }
 
     fn submit(&self, transactions: Vec<proto_Transaction>) -> Result<(), StateError> {
@@ -266,7 +303,7 @@ mod tests {
     use crate::access::transactions::{AddressRef, Filter, Transactions, WalletRef};
     use crate::access::pagination::PageQuery;
     use crate::storage::transaction_store::{IndexType, IndexedValue};
-    use crate::proto::transactions::{BlockchainId, Transaction as proto_Transaction, Change as proto_Change};
+    use crate::proto::transactions::{BlockchainId, Transaction as proto_Transaction, Change as proto_Change, TransactionMeta as proto_TransactionMeta};
     use crate::storage::indexing::IndexEncoding;
     use crate::storage::sled_access::SledStorage;
 
@@ -462,5 +499,88 @@ mod tests {
         let act = act.unwrap();
         assert!(act.is_some());
         assert_eq!(act.unwrap().value, "MTA5MjQ5MS81ODE=".to_string());
+    }
+
+    #[test]
+    fn no_tx_meta_by_default() {
+        let tmp_dir = TempDir::new("tx").unwrap();
+        let access = SledStorage::open(tmp_dir.path().to_path_buf()).unwrap();
+        let transactions = access.get_transactions();
+
+        let act = transactions.get_tx_meta(100, "0x2f761cbf069962cf3a82ab0d9b11c453e5d0caf4fb6d192624360def7bd1e81b");
+
+        assert!(act.is_ok());
+        let act = act.unwrap();
+        assert!(act.is_none());
+    }
+
+    #[test]
+    fn set_and_get_tx_meta() {
+        let tmp_dir = TempDir::new("tx").unwrap();
+        let access = SledStorage::open(tmp_dir.path().to_path_buf()).unwrap();
+        let transactions = access.get_transactions();
+
+        let mut meta = proto_TransactionMeta::new();
+        meta.blockchain = BlockchainId::CHAIN_ETHEREUM;
+        meta.tx_id = "0x2f761cbf069962cf3a82ab0d9b11c453e5d0caf4fb6d192624360def7bd1e81b".to_string();
+        meta.timestamp = 1_647_313_850_992;
+        meta.label = "test".to_string();
+        transactions.set_tx_meta(meta.clone()).unwrap();
+
+        let act = transactions.get_tx_meta(100, "0x2f761cbf069962cf3a82ab0d9b11c453e5d0caf4fb6d192624360def7bd1e81b");
+
+        assert!(act.is_ok());
+        let act = act.unwrap();
+        assert!(act.is_some());
+        let act = act.unwrap();
+        assert_eq!(act, meta);
+    }
+
+    #[test]
+    fn update_tx_meta_to_latest() {
+        let tmp_dir = TempDir::new("tx").unwrap();
+        let access = SledStorage::open(tmp_dir.path().to_path_buf()).unwrap();
+        let transactions = access.get_transactions();
+
+        let mut meta = proto_TransactionMeta::new();
+        meta.blockchain = BlockchainId::CHAIN_ETHEREUM;
+        meta.tx_id = "0x2f761cbf069962cf3a82ab0d9b11c453e5d0caf4fb6d192624360def7bd1e81b".to_string();
+        meta.timestamp = 1_647_313_000_000;
+        meta.label = "test".to_string();
+        transactions.set_tx_meta(meta.clone()).unwrap();
+
+        meta.timestamp = 1_647_313_100_000;
+        meta.label = "test 2".to_string();
+        transactions.set_tx_meta(meta.clone()).unwrap();
+
+        let act = transactions
+            .get_tx_meta(100, "0x2f761cbf069962cf3a82ab0d9b11c453e5d0caf4fb6d192624360def7bd1e81b")
+            .unwrap().unwrap();
+
+        assert_eq!(act.label, "test 2");
+    }
+
+    #[test]
+    fn no_update_tx_meta_to_old() {
+        let tmp_dir = TempDir::new("tx").unwrap();
+        let access = SledStorage::open(tmp_dir.path().to_path_buf()).unwrap();
+        let transactions = access.get_transactions();
+
+        let mut meta = proto_TransactionMeta::new();
+        meta.blockchain = BlockchainId::CHAIN_ETHEREUM;
+        meta.tx_id = "0x2f761cbf069962cf3a82ab0d9b11c453e5d0caf4fb6d192624360def7bd1e81b".to_string();
+        meta.timestamp = 1_647_313_100_000;
+        meta.label = "test 1".to_string();
+        transactions.set_tx_meta(meta.clone()).unwrap();
+
+        meta.timestamp = 1_647_313_000_000;
+        meta.label = "test 2".to_string();
+        transactions.set_tx_meta(meta.clone()).unwrap();
+
+        let act = transactions
+            .get_tx_meta(100, "0x2f761cbf069962cf3a82ab0d9b11c453e5d0caf4fb6d192624360def7bd1e81b")
+            .unwrap().unwrap();
+
+        assert_eq!(act.label, "test 1");
     }
 }
