@@ -1,5 +1,5 @@
 use std::collections::HashSet;
-use std::ops::Deref;
+use std::ops::{Bound, Deref};
 use std::sync::Arc;
 use protobuf::Message;
 use sled::{Batch, Db};
@@ -48,11 +48,12 @@ impl IndexEncoding for IndexType {
 }
 
 impl QueryRanges for Filter {
-    fn get_index_bounds(&self) -> (String, String) {
+    fn get_index_bounds(&self) -> (Bound<String>, Bound<String>) {
         // TODO use specific filter when available
-        let start = IndexType::ByAnyString("0".to_string()).get_index_key();
-        let end = IndexType::ByAnyString("Z".to_string()).get_index_key();
-        (start, end)
+        let now = IndexType::Everything(Utc::now().naive_utc().timestamp_millis() as u64)
+            .get_index_key();
+        let start = IndexType::Everything(0).get_index_key();
+        (Bound::Included(now), Bound::Included(start))
     }
 }
 
@@ -179,8 +180,7 @@ impl AddressBook for AddressBookAccess {
     fn query(&self, filter: Filter, page: PageQuery) -> Result<PageResult<proto_BookItem>, StateError> {
         let bounds = filter.get_index_bounds();
         let mut processed = HashSet::new();
-        let mut iter = self.db
-            .range(bounds.0..bounds.1);
+        let mut iter = self.db.range(bounds);
         let mut done = false;
 
         let mut results = Vec::new();

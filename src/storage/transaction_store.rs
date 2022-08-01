@@ -1,5 +1,5 @@
 use std::collections::HashSet;
-use std::ops::{Deref};
+use std::ops::{Bound, Deref};
 use std::str::FromStr;
 use std::sync::Arc;
 use chrono::{DateTime, TimeZone, Utc};
@@ -88,12 +88,12 @@ impl IndexedValue<IndexType> for proto_Transaction {
 
 
 impl QueryRanges for Filter {
-    fn get_index_bounds(&self) -> (String, String) {
+    fn get_index_bounds(&self) -> (Bound<String>, Bound<String>) {
         // TODO use wallet index if a wallet specified in filter
         let now = IndexType::Everything(Utc::now().naive_utc().timestamp_millis() as u64)
             .get_index_key();
         let start = IndexType::Everything(0u64).get_index_key();
-        (now, start)
+        (Bound::Included(now), Bound::Included(start))
     }
 }
 
@@ -127,8 +127,7 @@ impl Transactions for TransactionsAccess {
     fn query(&self, filter: Filter, page: PageQuery) -> Result<PageResult<proto_Transaction>, StateError> {
         let bounds = filter.get_index_bounds();
         let mut processed = HashSet::new();
-        let mut iter = self.db
-            .range(bounds.0..bounds.1);
+        let mut iter = self.db.range(bounds);
         let mut done = false;
 
         let mut txes = Vec::new();
@@ -234,8 +233,7 @@ impl Transactions for TransactionsAccess {
     fn get_count(&self, filter: Filter) -> Result<usize, StateError> {
         let bounds = filter.get_index_bounds();
         let mut processed = HashSet::new();
-        let mut iter = self.db
-            .range(bounds.0..bounds.1);
+        let mut iter = self.db.range(bounds);
         let mut count = 0;
         let mut done = false;
         while !done {

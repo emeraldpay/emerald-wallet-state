@@ -1,4 +1,5 @@
 use std::collections::HashSet;
+use std::ops::Bound;
 use std::sync::Arc;
 use chrono::Utc;
 use protobuf::{Message, RepeatedField};
@@ -74,8 +75,12 @@ pub trait IndexEncoding {
     fn get_index_key(&self) -> String;
 }
 
+///
+/// Defines the date required to query all possible entries under the trait
 pub trait QueryRanges {
-    fn get_index_bounds(&self) -> (String, String);
+    ///
+    /// Bounds of the indexes. Note that it query for _indexes_, not actual entries
+    fn get_index_bounds(&self) -> (Bound<String>, Bound<String>);
 }
 
 pub struct  IndexConvert {
