@@ -2,6 +2,15 @@
 
 Backend implementation for Store State of the Emerald Wallet.
 
+== Architecture
+
+Uses a https://github.com/spacejam/sled[Sled] database, with _keys_ as strings, and _value_ as Protobuf.
+
+.Storage directory:
+* Windows: `%APPDATA%\.emerald\state`
+* OSX: `~/Library/Emerald/state`
+* Linux: `~/.emerald/state`
+
 == Development
 
 .Generate Rust code from Protobuf
