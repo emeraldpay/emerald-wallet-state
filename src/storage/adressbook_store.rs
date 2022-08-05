@@ -4,34 +4,32 @@ use std::sync::Arc;
 use protobuf::Message;
 use sled::{Batch, Db};
 use uuid::Uuid;
-use chrono::{DateTime, Utc};
+use chrono::{Utc};
 use crate::access::addressbook::{AddressBook, Filter};
 use crate::access::pagination::{PageQuery, PageResult};
 use crate::errors::StateError;
 use crate::proto::addressbook::{BookItem as proto_BookItem};
 use crate::storage::indexing::{IndexConvert, IndexedValue, IndexEncoding, Indexing, QueryRanges};
+use crate::storage::trigrams::Trigram;
 
 const PREFIX_KEY: &'static str = "addrbook";
 const PREFIX_IDX: &'static str = "idx:addrbook";
 
 enum IndexType {
-    // `<LABEL>/<TIMESTAMP>`
-    ByLabel(String, u64),
     // `<ADDR>/<TIMESTAMP>`
     ByAddress(String, u64),
     // `/<TIMESTAMP>`
     Everything(u64),
-    // `/<LABEL-OR-ADDR>`
-    ByAnyString(String)
+    // `/<TRIGRAM>/<TIMESTAMP>` timestamp is mostly used for uniquiness, but also gives a useful order
+    ByTrigram(String, u64)
 }
 
 impl IndexType {
     fn get_prefix(&self) -> usize {
         match self {
             IndexType::Everything(_) => 1,
-            IndexType::ByLabel(_, _) => 2,
-            IndexType::ByAddress(_, _) => 3,
-            IndexType::ByAnyString(_) => 4,
+            IndexType::ByAddress(_, _) => 2,
+            IndexType::ByTrigram(_, _) => 3,
         }
     }
 }
@@ -39,56 +37,58 @@ impl IndexType {
 impl IndexEncoding for IndexType {
     fn get_index_key(&self) -> String {
         match self {
-            IndexType::ByLabel(label, ts) => format!("{}:{:}/{:}/{:}", PREFIX_IDX, self.get_prefix(), label, IndexConvert::get_desc_timestamp(*ts)),
             IndexType::ByAddress(addr, ts) => format!("{}:{:}/{:}/{:}", PREFIX_IDX, self.get_prefix(), addr, IndexConvert::get_desc_timestamp(*ts)),
             IndexType::Everything(ts) => format!("{}:{:}/{:}", PREFIX_IDX, self.get_prefix(), IndexConvert::get_desc_timestamp(*ts)),
-            IndexType::ByAnyString(s) => format!("{}:{:}/{:}", PREFIX_IDX, self.get_prefix(), s),
+            IndexType::ByTrigram(s, ts) => format!("{}:{:}/{:}/{:}", PREFIX_IDX, self.get_prefix(), s, IndexConvert::get_desc_timestamp(*ts)),
         }
     }
 }
 
 impl QueryRanges for Filter {
     fn get_index_bounds(&self) -> (Bound<String>, Bound<String>) {
-        // TODO use specific filter when available
-        let now = IndexType::Everything(Utc::now().naive_utc().timestamp_millis() as u64)
-            .get_index_key();
+        // use the index build over the text
+        if let Some(text) = &self.text {
+            if let Some(b) = Trigram::search_bound(&text) {
+                let start = IndexType::ByTrigram(b.clone(), 0).get_index_key();
+                let now = IndexType::ByTrigram(b, Utc::now().naive_utc().timestamp_millis() as u64).get_index_key();
+                // timestamp index is built on descending order
+                return (Bound::Included(now), Bound::Included(start))
+            }
+        }
+
+        // just scan everythign for other queries
+        let now = IndexType::Everything(Utc::now().naive_utc().timestamp_millis() as u64).get_index_key();
         let start = IndexType::Everything(0).get_index_key();
+        // timestamp index is built on descending order
         (Bound::Included(now), Bound::Included(start))
     }
 }
 
 impl IndexedValue<IndexType> for proto_BookItem {
+
     fn get_index(&self) -> Vec<IndexType> {
+        let mut text = String::new();
+
         let mut keys: Vec<IndexType> = Vec::new();
         let ts = self.create_timestamp;
 
         keys.push(IndexType::Everything(ts));
 
-        let mut any_string: Option<IndexType> = None;
-
         let label = self.get_label().trim();
         if !label.is_empty() {
-            keys.push(IndexType::ByLabel(label.to_lowercase().to_string(), ts));
-            if any_string.is_none() {
-                any_string = Some(IndexType::ByAnyString(label.to_lowercase().to_string()));
-            }
+            text.push_str(label);
         }
 
         let address = &self.get_address().address.trim();
         if !address.is_empty() {
+            text.push_str(address);
             keys.push(IndexType::ByAddress(address.to_lowercase().to_string(), ts));
-            if any_string.is_none() {
-                any_string = Some(IndexType::ByAnyString(address.to_lowercase().to_string()));
-            }
         }
 
-        if any_string.is_none() {
-            any_string = Some(IndexType::ByAnyString(format!("{:#013}", ts)));
-        }
-
-        if let Some(any_strgin_idx) = any_string {
-            keys.push(any_strgin_idx)
-        }
+        let trigrams = Trigram::extract(text);
+        trigrams.iter().for_each(|w| {
+            keys.push(IndexType::ByTrigram(w.clone(), ts));
+        });
 
         keys
     }
@@ -284,5 +284,125 @@ mod tests {
 
         assert_eq!(result, exp);
         assert!(results.cursor.is_none());
+    }
+
+    #[test]
+    fn can_find_by_text() {
+        let tmp_dir = TempDir::new("test-addressbook").unwrap();
+        let access = SledStorage::open(tmp_dir.path().to_path_buf()).unwrap();
+        let store = access.get_addressbook();
+
+        let mut item = proto_BookItem::new();
+        item.create_timestamp = 1_647_313_850_992;
+        item.blockchain = 101;
+        item.label = "Hello World!".to_string();
+        let mut address = proto_Address::new();
+        address.address = "0xEdD91797204D3537fBaBDe0E0E42AaE99975f2Bb".to_string();
+        item.set_address(address);
+
+        let results = store.add(vec![item.clone()]).expect("not saved");
+        assert_eq!(results.len(), 1);
+        let id = results[0].to_string();
+
+        let filter = Filter {
+            text: Some("world".to_string()),
+            ..Filter::default()
+        };
+
+        let results = store.query(filter, PageQuery::default()).expect("queried");
+        assert_eq!(results.values.len(), 1);
+        let result = results.values.get(0).unwrap().clone();
+
+        assert_eq!(result.id, id);
+    }
+
+    #[test]
+    fn can_find_by_russian_text() {
+        let tmp_dir = TempDir::new("test-addressbook").unwrap();
+        let access = SledStorage::open(tmp_dir.path().to_path_buf()).unwrap();
+        let store = access.get_addressbook();
+
+        let mut item = proto_BookItem::new();
+        item.create_timestamp = 1_647_313_850_992;
+        item.blockchain = 101;
+        item.label = "Привет Мир!".to_string();
+        let mut address = proto_Address::new();
+        address.address = "0xEdD91797204D3537fBaBDe0E0E42AaE99975f2Bb".to_string();
+        item.set_address(address);
+
+        let results = store.add(vec![item.clone()]).expect("not saved");
+        assert_eq!(results.len(), 1);
+        let id = results[0].to_string();
+
+        let filter = Filter {
+            text: Some("мир".to_string()),
+            ..Filter::default()
+        };
+
+        let results = store.query(filter, PageQuery::default()).expect("queried");
+        assert_eq!(results.values.len(), 1);
+        let result = results.values.get(0).unwrap().clone();
+
+        assert_eq!(result.id, id);
+    }
+
+    #[test]
+    fn can_find_by_one_char_of_text() {
+        let tmp_dir = TempDir::new("test-addressbook").unwrap();
+        let access = SledStorage::open(tmp_dir.path().to_path_buf()).unwrap();
+        let store = access.get_addressbook();
+
+        let mut item = proto_BookItem::new();
+        item.create_timestamp = 1_647_313_850_992;
+        item.blockchain = 101;
+        item.label = "Hello World!".to_string();
+        let mut address = proto_Address::new();
+        address.address = "0xEdD91797204D3537fBaBDe0E0E42AaE99975f2Bb".to_string();
+        item.set_address(address);
+
+        let results = store.add(vec![item.clone()]).expect("not saved");
+        assert_eq!(results.len(), 1);
+        let id = results[0].to_string();
+
+        let filter = Filter {
+            text: Some("h".to_string()),
+            ..Filter::default()
+        };
+
+        let results = store.query(filter, PageQuery::default()).expect("queried");
+        assert_eq!(results.values.len(), 1);
+        let result = results.values.get(0).unwrap().clone();
+
+        assert_eq!(result.id, id);
+    }
+
+    #[test]
+    fn can_find_by_address_part() {
+        let tmp_dir = TempDir::new("test-addressbook").unwrap();
+        let access = SledStorage::open(tmp_dir.path().to_path_buf()).unwrap();
+        let store = access.get_addressbook();
+
+        let mut item = proto_BookItem::new();
+        item.create_timestamp = 1_647_313_850_992;
+        item.blockchain = 101;
+        item.label = "Hello World!".to_string();
+        let mut address = proto_Address::new();
+        address.address = "0xEdD91797204D3537fBaBDe0E0E42AaE99975f2Bb".to_string();
+        item.set_address(address);
+
+        let results = store.add(vec![item.clone()]).expect("not saved");
+        assert_eq!(results.len(), 1);
+        let id = results[0].to_string();
+
+        let filter = Filter {
+            text: Some("9179".to_string()),
+            ..Filter::default()
+        };
+
+        let results = store.query(filter, PageQuery::default()).expect("queried");
+        assert_eq!(results.values.len(), 1);
+        let result = results.values.get(0).unwrap().clone();
+
+        assert_eq!(result.id, id);
     }
 }

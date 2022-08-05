@@ -1,6 +1,7 @@
 extern crate chrono;
 extern crate uuid;
 extern crate protobuf;
+extern crate regex;
 
 pub mod errors;
 pub mod proto;

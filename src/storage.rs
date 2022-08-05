@@ -6,6 +6,7 @@ mod indexing;
 pub mod transaction_store;
 pub mod adressbook_store;
 pub mod xpubpos_store;
+pub(crate) mod trigrams;
 
 /// Default path (*nix)
 #[cfg(all(
