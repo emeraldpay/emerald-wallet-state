@@ -27,14 +27,17 @@ pub trait AddressBook {
     /// Query for records in storage using specified filter and page
     fn query(&self, filter: Filter, page: PageQuery) -> Result<PageResult<BookItem>, StateError>;
 
+    ///
+    /// Update the store Address Book item with new values
+    fn update(&self, id: Uuid, update: BookItem) -> Result<(), StateError>;
 }
 
 impl BookItem {
     fn address_contains(&self, q: String) -> bool {
-        if self.address.is_none() {
+        if !self.has_address() {
             return false
         }
-        self.address.clone().unwrap()
+        self.get_address()
             .address.to_lowercase().contains(&q)
     }
 }

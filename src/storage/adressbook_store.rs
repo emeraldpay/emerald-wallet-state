@@ -127,6 +127,24 @@ impl AddressBookAccess {
     }
 }
 
+impl AddressBookAccess {
+    fn add_item(&self, item: proto_BookItem, batch: &mut Batch) -> Result<(), StateError> {
+        let id = Uuid::parse_str(item.get_id()).unwrap();
+        if let Ok(item_bytes) = item.write_to_bytes() {
+            let item_key = AddressBookAccess::get_key(id);
+            let indexes: Vec<String> = item.get_index_keys();
+            Indexing::add_backrefs(&indexes, item_key.clone(), batch)?;
+            for idx in indexes {
+                batch.insert(idx.as_bytes(), item_key.as_bytes());
+            }
+            batch.insert(item_key.as_bytes(), item_bytes);
+            Ok(())
+        } else {
+            Err(StateError::CorruptedValue)
+        }
+    }
+}
+
 impl AddressBook for AddressBookAccess {
 
     fn add(&self, items: Vec<proto_BookItem>) -> Result<Vec<Uuid>, StateError> {
@@ -138,30 +156,22 @@ impl AddressBook for AddressBookAccess {
                 item_source
             } else {
                 let mut copy = item_source.clone();
-                copy.id = Uuid::new_v4().to_string();
+                copy.set_id(Uuid::new_v4().to_string());
                 copy
             };
-
-            // it it's just a newly created record fill it with creation/update timestamp
-            let now = Utc::now().naive_utc().timestamp_millis() as u64;
-            if item.create_timestamp == 0 {
-                item.create_timestamp = now;
-            }
-            if item.update_timestamp == 0 {
-                item.update_timestamp = now;
-            }
-
             let id = Uuid::parse_str(item.get_id()).unwrap();
-            if let Ok(item_bytes) = item.write_to_bytes() {
-                ids.push(id);
-                let item_key = AddressBookAccess::get_key(id);
-                let indexes: Vec<String> = item.get_index_keys();
-                Indexing::add_backrefs(&indexes, item_key.clone(), &mut batch)?;
-                for idx in indexes {
-                    batch.insert(idx.as_bytes(), item_key.as_bytes());
-                }
-                batch.insert(item_key.as_bytes(), item_bytes);
+
+            // if it's just a newly created record then fill it with creation/update timestamp
+            let now = Utc::now().naive_utc().timestamp_millis() as u64;
+            if item.get_create_timestamp() == 0 {
+                item.set_create_timestamp(now);
             }
+            if item.get_update_timestamp() == 0 {
+                item.set_update_timestamp(now);
+            }
+
+            let _ = self.add_item(item, &mut batch)?;
+            ids.push(id);
         }
         self.db.apply_batch(batch)
             .map_err(|e| StateError::from(e))
@@ -217,12 +227,30 @@ impl AddressBook for AddressBookAccess {
 
         Ok(result)
     }
+
+    fn update(&self, id: Uuid, update: proto_BookItem) -> Result<(), StateError> {
+        let mut batch = Batch::default();
+        let item_key = AddressBookAccess::get_key(id);
+        batch.remove(item_key.as_bytes());
+        Indexing::remove_backref(item_key, self.db.clone(), &mut batch)?;
+
+        let now = Utc::now().naive_utc().timestamp_millis() as u64;
+
+        let mut item = update.clone();
+        item.set_update_timestamp(now);
+        item.set_id(id.to_string());
+        let _ = self.add_item(item, &mut batch)?;
+
+        self.db.apply_batch(batch)
+            .map_err(|e| StateError::from(e))
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use tempdir::TempDir;
     use uuid::Uuid;
+    use chrono::Utc;
     use crate::access::addressbook::{AddressBook, Filter};
     use crate::access::pagination::PageQuery;
     use crate::storage::sled_access::SledStorage;
@@ -404,5 +432,70 @@ mod tests {
         let result = results.values.get(0).unwrap().clone();
 
         assert_eq!(result.id, id);
+    }
+
+    #[test]
+    fn updates_existing_entry() {
+        let tmp_dir = TempDir::new("test-addressbook").unwrap();
+        let access = SledStorage::open(tmp_dir.path().to_path_buf()).unwrap();
+        let store = access.get_addressbook();
+
+        let ts_start = Utc::now().naive_utc().timestamp_millis() as u64;
+
+        let mut item = proto_BookItem::new();
+        item.blockchain = 101;
+        let mut address = proto_Address::new();
+        address.address = "0xEdD91797204D3537fBaBDe0E0E42AaE99975f2Bb".to_string();
+        item.set_address(address);
+        let results = store.add(vec![item.clone()]).expect("not saved");
+        let id = results[0];
+
+        let mut updated = item.clone();
+        updated.id = id.to_string();
+        updated.label = "Hello World!".to_string();
+        store.update(id, updated.clone()).expect("not updated");
+
+        let ts_end = Utc::now().naive_utc().timestamp_millis() as u64;
+
+        let exp = updated.clone();
+
+        let results = store.query(Filter::default(), PageQuery::default()).expect("queried");
+        assert_eq!(results.values.len(), 1);
+        let mut result = results.values.get(0).unwrap().clone();
+
+        assert!(result.update_timestamp >= ts_start);
+        assert!(result.update_timestamp <= ts_end);
+
+        result.clear_update_timestamp();
+        assert_eq!(result, exp);
+    }
+
+    #[test]
+    fn search_by_updated_label() {
+        let tmp_dir = TempDir::new("test-addressbook").unwrap();
+        let access = SledStorage::open(tmp_dir.path().to_path_buf()).unwrap();
+        let store = access.get_addressbook();
+
+        let mut item = proto_BookItem::new();
+        item.blockchain = 101;
+        let mut address = proto_Address::new();
+        address.address = "0xEdD91797204D3537fBaBDe0E0E42AaE99975f2Bb".to_string();
+        item.set_address(address);
+        let results = store.add(vec![item.clone()]).expect("not saved");
+        let id = results[0];
+
+        let mut updated = item.clone();
+        updated.id = id.to_string();
+        updated.label = "Hello World!".to_string();
+        store.update(id, updated.clone()).expect("not updated");
+
+        let filter = Filter {
+            text: Some("Hello".to_string()),
+            ..Filter::default()
+        };
+        let results = store.query(filter, PageQuery::default()).expect("queried");
+        assert_eq!(results.values.len(), 1);
+        assert_eq!(results.values[0].id, id.to_string())
+
     }
 }
