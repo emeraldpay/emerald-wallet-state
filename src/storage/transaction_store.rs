@@ -359,6 +359,28 @@ mod tests {
     }
 
     #[test]
+    fn create_and_find_tx_without_associated_wallet() {
+        let tmp_dir = TempDir::new("create_and_find_tx").unwrap();
+        let access = SledStorage::open(tmp_dir.path().to_path_buf()).unwrap();
+        let transactions = access.get_transactions();
+
+        let mut tx = proto_Transaction::new();
+        tx.blockchain = BlockchainId::CHAIN_ETHEREUM;
+        tx.tx_id = "0x2f761cbf069962cf3a82ab0d9b11c453e5d0caf4fb6d192624360def7bd1e81b".to_string();
+        tx.since_timestamp = 1_647_313_850_992;
+        let mut change1 = proto_Change::new();
+        change1.address = "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48".to_string();
+        tx.changes.push(change1);
+
+        transactions.submit(vec![tx.clone()]).expect("not saved");
+
+        let results = transactions.query(Filter::default(), PageQuery::default()).expect("queried");
+        assert_eq!(results.values.len(), 1);
+        assert_eq!(results.values.get(0).unwrap().clone(), tx);
+        assert!(results.cursor.is_none());
+    }
+
+    #[test]
     fn create_and_delete_tx() {
         let tmp_dir = TempDir::new("create_and_find_tx").unwrap();
         let access = SledStorage::open(tmp_dir.path().to_path_buf()).unwrap();
