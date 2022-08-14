@@ -1,6 +1,7 @@
 #[derive(Debug, Clone)]
 pub struct Cursor {
-    pub offset: u64,
+    // a db key to start querying from
+    pub offset: String,
 }
 
 #[derive(Debug, Clone)]

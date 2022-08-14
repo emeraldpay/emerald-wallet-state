@@ -7,7 +7,7 @@ use protobuf::{Message, ProtobufEnum};
 use sled::{Batch, Db};
 use uuid::Uuid;
 use crate::access::transactions::{Filter, RemoteCursor, Transactions, WalletRef};
-use crate::access::pagination::{PageResult, PageQuery};
+use crate::access::pagination::{PageResult, PageQuery, Cursor};
 use crate::errors::{StateError,InvalidValueError};
 use crate::proto::transactions::{Transaction as proto_Transaction, Cursor as proto_Cursor, TransactionMeta as proto_TransactionMeta};
 use crate::storage::indexing::{IndexedValue, QueryRanges, IndexConvert, IndexEncoding, Indexing};
@@ -125,23 +125,36 @@ impl TransactionsAccess {
 impl Transactions for TransactionsAccess {
 
     fn query(&self, filter: Filter, page: PageQuery) -> Result<PageResult<proto_Transaction>, StateError> {
-        let bounds = filter.get_index_bounds();
+        let mut bounds = filter.get_index_bounds();
+        if let Some(cursor) = page.cursor {
+            bounds.0 = Bound::Excluded(cursor.offset)
+        };
+
+
         let mut processed = HashSet::new();
         let mut iter = self.db.range(bounds);
         let mut done = false;
 
         let mut txes = Vec::new();
+        let mut cursor_key: Option<String> = None;
+        let mut read_count = 0;
 
         while !done {
             let next = iter.next();
             match next {
                 Some(x) => match x {
                     Ok(v) => {
-                        let txkey = v.1.to_vec();
-                        let txkey = String::from_utf8(txkey).unwrap();
-                        let unprocessed = processed.insert(txkey.clone());
+                        read_count += 1;
+
+                        let idx_key = v.0.to_vec();
+                        let idx_key = String::from_utf8(idx_key).unwrap();
+                        cursor_key = Some(idx_key.clone());
+                        let tx_key = v.1.to_vec();
+                        let tx_key = String::from_utf8(tx_key).unwrap();
+
+                        let unprocessed = processed.insert(tx_key.clone());
                         if unprocessed {
-                            if let Some(tx) = self.get_tx_by_key(txkey) {
+                            if let Some(tx) = self.get_tx_by_key(tx_key) {
                                 if filter.check_filter(&tx) {
                                     txes.push(tx);
                                     if txes.len() >= page.limit {
@@ -157,9 +170,11 @@ impl Transactions for TransactionsAccess {
             }
         }
 
+        let reached_end = read_count < page.limit;
+
         let result = PageResult {
             values: txes,
-            cursor: None,
+            cursor: if reached_end { None } else { cursor_key.map(|offset| Cursor {offset}) },
         };
 
         Ok(result)
@@ -442,6 +457,56 @@ mod tests {
         assert_eq!(results.values.get(0).unwrap().clone(), tx2);
         assert_eq!(results.values.get(1).unwrap().clone(), tx1);
         assert!(results.cursor.is_none());
+    }
+
+    #[test]
+    fn query_with_pagination() {
+        let tmp_dir = TempDir::new("create_and_find_tx").unwrap();
+        let access = SledStorage::open(tmp_dir.path().to_path_buf()).unwrap();
+        let transactions = access.get_transactions();
+
+        let mut insert = Vec::new();
+        for i in 0..10 {
+            let mut tx = proto_Transaction::new();
+            tx.blockchain = BlockchainId::CHAIN_ETHEREUM;
+            tx.tx_id = format!("0xd9b11cef7bd1e81b453e5d0caf4fb6d1922f761cbf069962cf3a82ab062400{}", i);
+            tx.since_timestamp = 1_647_313_000_100 - i; // decrease tx because it returned in desc order
+            let mut change1 = proto_Change::new();
+            change1.wallet_id = "72279ede-44c4-4951-925b-f51a7b9e929a".to_string();
+            change1.entry_id = 0;
+            change1.address = "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48".to_string();
+            tx.changes.push(change1);
+            insert.push(tx);
+        }
+
+        transactions.submit(insert).expect("not saved");
+
+        let results_1 = transactions.query(
+            Filter::default(),
+            PageQuery { limit: 5, ..PageQuery::default() }
+        ).expect("query data");
+
+        assert_eq!(results_1.values.len(), 5);
+        assert_eq!(results_1.values.get(0).unwrap().tx_id, "0xd9b11cef7bd1e81b453e5d0caf4fb6d1922f761cbf069962cf3a82ab0624000");
+        assert_eq!(results_1.values.get(4).unwrap().tx_id, "0xd9b11cef7bd1e81b453e5d0caf4fb6d1922f761cbf069962cf3a82ab0624004");
+        assert!(results_1.cursor.is_some());
+
+        let results_2 = transactions.query(
+            Filter::default(),
+            PageQuery { limit: 5, cursor: results_1.cursor, ..PageQuery::default() }
+        ).expect("query data");
+
+        assert_eq!(results_2.values.len(), 5);
+        assert_eq!(results_2.values.get(0).unwrap().tx_id, "0xd9b11cef7bd1e81b453e5d0caf4fb6d1922f761cbf069962cf3a82ab0624005");
+        assert_eq!(results_2.values.get(4).unwrap().tx_id, "0xd9b11cef7bd1e81b453e5d0caf4fb6d1922f761cbf069962cf3a82ab0624009");
+        // a cursor may still presents since the storage doesnt know is there are any other items
+
+        let results_3 = transactions.query(
+            Filter::default(),
+            PageQuery { limit: 5, cursor: results_2.cursor, ..PageQuery::default() }
+        ).expect("query data");
+        assert_eq!(results_3.values.len(), 0);
+        assert!(results_3.cursor.is_none());
     }
 
     #[test]

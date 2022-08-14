@@ -77,6 +77,8 @@ message Change {
   }
 }
 
+//
+// Cursor used for querying the transaction history from Emerald API
 message Cursor {
   string address = 1;
   string value = 2;

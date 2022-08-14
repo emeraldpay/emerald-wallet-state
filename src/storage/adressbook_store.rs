@@ -6,7 +6,7 @@ use sled::{Batch, Db};
 use uuid::Uuid;
 use chrono::{Utc};
 use crate::access::addressbook::{AddressBook, Filter};
-use crate::access::pagination::{PageQuery, PageResult};
+use crate::access::pagination::{Cursor, PageQuery, PageResult};
 use crate::errors::StateError;
 use crate::proto::addressbook::{BookItem as proto_BookItem};
 use crate::storage::indexing::{IndexConvert, IndexedValue, IndexEncoding, Indexing, QueryRanges};
@@ -188,23 +188,33 @@ impl AddressBook for AddressBookAccess {
     }
 
     fn query(&self, filter: Filter, page: PageQuery) -> Result<PageResult<proto_BookItem>, StateError> {
-        let bounds = filter.get_index_bounds();
+        let mut bounds = filter.get_index_bounds();
+        if let Some(cursor) = page.cursor {
+            bounds.0 = Bound::Excluded(cursor.offset)
+        };
         let mut processed = HashSet::new();
         let mut iter = self.db.range(bounds);
         let mut done = false;
 
         let mut results = Vec::new();
+        let mut cursor_key: Option<String> = None;
+        let mut read_count = 0;
 
         while !done {
             let next = iter.next();
             match next {
                 Some(x) => match x {
                     Ok(v) => {
-                        let itemkey = v.1.to_vec();
-                        let itemkey = AddressBookAccess::extract_id(String::from_utf8(itemkey).unwrap())?;
-                        let unprocessed = processed.insert(itemkey.clone());
+                        read_count += 1;
+
+                        let idx_key = v.0.to_vec();
+                        let idx_key = String::from_utf8(idx_key).unwrap();
+                        cursor_key = Some(idx_key.clone());
+                        let item_key = v.1.to_vec();
+                        let item_key = AddressBookAccess::extract_id(String::from_utf8(item_key).unwrap())?;
+                        let unprocessed = processed.insert(item_key.clone());
                         if unprocessed {
-                            if let Some(item) = self.get_item(itemkey) {
+                            if let Some(item) = self.get_item(item_key) {
                                 if filter.check_filter(&item) {
                                     results.push(item);
                                     if results.len() >= page.limit {
@@ -220,9 +230,11 @@ impl AddressBook for AddressBookAccess {
             }
         }
 
+        let reached_end = read_count < page.limit;
+
         let result = PageResult {
             values: results,
-            cursor: None,
+            cursor: if reached_end { None } else { cursor_key.map(|offset| Cursor {offset}) },
         };
 
         Ok(result)
@@ -496,6 +508,64 @@ mod tests {
         let results = store.query(filter, PageQuery::default()).expect("queried");
         assert_eq!(results.values.len(), 1);
         assert_eq!(results.values[0].id, id.to_string())
+
+    }
+
+    #[test]
+    fn uses_cursor() {
+        let tmp_dir = TempDir::new("test-addressbook").unwrap();
+        let access = SledStorage::open(tmp_dir.path().to_path_buf()).unwrap();
+        let store = access.get_addressbook();
+
+        for i in 0..10 {
+            let mut item = proto_BookItem::new();
+            item.create_timestamp = 1_647_313_850_000 - i;
+            item.blockchain = 101;
+            item.label = format!("Hello World! {}", i);
+            let mut address = proto_Address::new();
+            address.address = format!("0xEdD91797204D3537fBaBDe0E0E42AaE99975f00{}", i);
+            item.set_address(address);
+
+            let _ = store.add(vec![item.clone()]).expect("not saved");
+        }
+
+
+        let results_1 = store.query(
+            Filter {
+                text: Some("world".to_string()),
+                ..Filter::default()
+            },
+            PageQuery { limit: 5, ..PageQuery::default() }
+        ).expect("queried");
+
+
+        assert_eq!(results_1.values.len(), 5);
+        assert_eq!(results_1.values[0].label, "Hello World! 0");
+        assert_eq!(results_1.values[4].label, "Hello World! 4");
+        assert!(results_1.cursor.is_some());
+
+        let results_2 = store.query(
+            Filter {
+                text: Some("world".to_string()),
+                ..Filter::default()
+            },
+            PageQuery { limit: 5, cursor: results_1.cursor, ..PageQuery::default() }
+        ).expect("queried");
+
+
+        assert_eq!(results_2.values.len(), 5);
+        assert_eq!(results_2.values[0].label, "Hello World! 5");
+        assert_eq!(results_2.values[4].label, "Hello World! 9");
+        assert!(results_2.cursor.is_some()); // because it doesn't know yet that there is no other entries
+
+        let results_3 = store.query(
+            Filter {
+                text: Some("world".to_string()),
+                ..Filter::default()
+            },
+            PageQuery { limit: 5, cursor: results_2.cursor, ..PageQuery::default() }
+        ).expect("queried");
+        assert!(results_3.cursor.is_none());
 
     }
 }
