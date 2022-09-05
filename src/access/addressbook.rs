@@ -14,10 +14,15 @@ pub trait AddressBook {
 
     ///
     /// Add a new record to the Address Book.
-    /// If the record doesn't have an ID it threts it as a new Records, which means generating a new random ID for it.
+    /// If the record doesn't have an ID it threats it as a new Records, which means generating a new random ID for it.
     /// If the ID is set, then an existing record with that ID gets updated.
     /// Returns list of IDs of created/updated records.
     fn add(&self, items: Vec<BookItem>) -> Result<Vec<Uuid>, StateError>;
+
+    ///
+    /// Get an item if it exists.
+    /// Returns `Ok(Some)` when it exists, or `Ok(None)` if not. Or `Err(StateError)` if cannot read
+    fn get(&self, id: Uuid) -> Result<Option<BookItem>, StateError>;
 
     ///
     /// Remove a record with the specified id, if it does exit. Otherwise does nothing, returns ok in both cases.

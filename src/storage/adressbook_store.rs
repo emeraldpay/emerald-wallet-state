@@ -178,6 +178,20 @@ impl AddressBook for AddressBookAccess {
             .map(|_| ids)
     }
 
+    fn get(&self, id: Uuid) -> Result<Option<proto_BookItem>, StateError> {
+        let item_key = AddressBookAccess::get_key(id);
+        let result = self.db.get(item_key)?
+            .map(|b| proto_BookItem::parse_from_bytes(b.as_ref()));
+        match result {
+            Some(parsed) => if let Ok(msg) = parsed {
+                Ok(Some(msg))
+            } else {
+                Err(StateError::CorruptedValue)
+            },
+            None => Ok(None)
+        }
+    }
+
     fn remove(&self, id: Uuid) -> Result<(), StateError> {
         let mut batch = Batch::default();
         let item_key = AddressBookAccess::get_key(id);
@@ -294,6 +308,36 @@ mod tests {
         result.update_timestamp = 0;
         assert_eq!(result, exp);
         assert!(results.cursor.is_none());
+    }
+
+    #[test]
+    fn create_and_get() {
+        let tmp_dir = TempDir::new("test-addressbook").unwrap();
+        let access = SledStorage::open(tmp_dir.path().to_path_buf()).unwrap();
+        let store = access.get_addressbook();
+
+        let mut item = proto_BookItem::new();
+        item.create_timestamp = 1_647_313_850_992;
+        item.blockchain = 101;
+        let mut address = proto_Address::new();
+        address.address = "0xEdD91797204D3537fBaBDe0E0E42AaE99975f2Bb".to_string();
+        item.set_address(address);
+
+        let mut exp = item.clone();
+
+        let results = store.add(vec![item.clone()]).expect("not saved");
+        assert_eq!(results.len(), 1);
+        let id = results[0];
+
+        let result = store.get(id);
+        assert!(result.is_ok());
+        let result = result.unwrap();
+        assert!(result.is_some());
+        let mut result = result.unwrap();
+
+        exp.id = id.clone().to_string();
+        result.update_timestamp = 0;
+        assert_eq!(result, exp);
     }
 
     #[test]
