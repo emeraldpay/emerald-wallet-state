@@ -5,7 +5,6 @@ message BookItem {
   string id = 1;
   Address address = 2;
   string label = 3;
-  string description = 4;
   uint32 blockchain = 5;
   uint64 create_timestamp = 6;
   uint64 update_timestamp = 7;

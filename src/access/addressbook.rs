@@ -57,7 +57,7 @@ impl Filter {
 
         let by_text = if let Some(q) = &self.text {
             let q = q.to_lowercase().trim().to_string();
-            t.label.to_lowercase().contains(&q) || t.description.to_lowercase().contains(&q) || t.address_contains(q)
+            t.label.to_lowercase().contains(&q) || t.address_contains(q)
         } else {
             true
         };
@@ -135,28 +135,6 @@ mod tests {
         assert!(filter.check_filter(&item));
 
         item.label = "".to_string();
-        assert!(!filter.check_filter(&item));
-    }
-
-    #[test]
-    fn filter_by_description() {
-        let filter = Filter {
-            text: Some("World".to_string()),
-            ..Filter::default()
-        };
-
-        let mut item = proto_BookItem::new();
-        item.id = "989d7648-13e3-4cb9-acfb-85464f063b34".to_string();
-        item.create_timestamp = 1_647_313_850_992;
-        item.blockchain = 101;
-        item.description = "Hello World!".to_string();
-        let mut address = proto_Address::new();
-        address.address = "0xEdD91797204D3537fBaBDe0E0E42AaE99975f2Bb".to_string();
-        item.set_address(address);
-
-        assert!(filter.check_filter(&item));
-
-        item.description = "".to_string();
         assert!(!filter.check_filter(&item));
     }
 
