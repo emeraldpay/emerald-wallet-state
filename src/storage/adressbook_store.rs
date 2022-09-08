@@ -148,6 +148,10 @@ impl AddressBookAccess {
 impl AddressBook for AddressBookAccess {
 
     fn add(&self, items: Vec<proto_BookItem>) -> Result<Vec<Uuid>, StateError> {
+        for item in &items {
+            item.validate()?;
+        }
+
         let mut batch = Batch::default();
         let mut ids = Vec::new();
         for item_source in items {
@@ -611,5 +615,26 @@ mod tests {
         ).expect("queried");
         assert!(results_3.cursor.is_none());
 
+    }
+
+
+    #[test]
+    fn validates_address() {
+        let tmp_dir = TempDir::new("test-addressbook").unwrap();
+        let access = SledStorage::open(tmp_dir.path().to_path_buf()).unwrap();
+        let store = access.get_addressbook();
+
+        let mut item = proto_BookItem::new();
+        item.create_timestamp = 1_647_313_850_992;
+        item.blockchain = 101;
+        let mut address = proto_Address::new();
+        address.address = "INVALID!!!".to_string();
+        item.set_address(address);
+
+        let results = store.add(vec![item.clone()]);
+        assert!(results.is_err());
+
+        let results = store.query(Filter::default(), PageQuery::default()).expect("queried");
+        assert!(results.values.is_empty());
     }
 }

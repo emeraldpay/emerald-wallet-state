@@ -12,6 +12,7 @@ protobuf = { version = "2.27", features = ["with-bytes"] }
 enum-display-derive = "0.1"
 fs_extra = "1.2"
 regex = "1.6"
+bitcoin = "~0.28"
 
 [dev-dependencies]
 tempdir = "0.3"
