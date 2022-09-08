@@ -147,33 +147,23 @@ impl AddressBookAccess {
 
 impl AddressBook for AddressBookAccess {
 
-    fn add(&self, items: Vec<proto_BookItem>) -> Result<Vec<Uuid>, StateError> {
+    fn add(&self, items_original: Vec<proto_BookItem>) -> Result<Vec<Uuid>, StateError> {
+        // first fix or fill missing parts, if any
+        let mut items = Vec::new();
+        for x in items_original {
+            items.push(x.preprocess()?)
+        }
+
+        // validate the data we got before storing it, return error if any item is invalid
         for item in &items {
             item.validate()?;
         }
 
+        // all data is good, store it
         let mut batch = Batch::default();
         let mut ids = Vec::new();
-        for item_source in items {
-            // reuse existing id, or create a new id
-            let mut item = if Uuid::parse_str(item_source.get_id()).is_ok() {
-                item_source
-            } else {
-                let mut copy = item_source.clone();
-                copy.set_id(Uuid::new_v4().to_string());
-                copy
-            };
+        for item in items {
             let id = Uuid::parse_str(item.get_id()).unwrap();
-
-            // if it's just a newly created record then fill it with creation/update timestamp
-            let now = Utc::now().naive_utc().timestamp_millis() as u64;
-            if item.get_create_timestamp() == 0 {
-                item.set_create_timestamp(now);
-            }
-            if item.get_update_timestamp() == 0 {
-                item.set_update_timestamp(now);
-            }
-
             let _ = self.add_item(item, &mut batch)?;
             ids.push(id);
         }

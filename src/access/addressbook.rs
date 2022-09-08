@@ -1,5 +1,6 @@
 use std::str::FromStr;
 use bitcoin::util::bip32::ExtendedPubKey;
+use chrono::Utc;
 use protobuf::ProtobufEnum;
 use uuid::Uuid;
 use crate::access::pagination::{PageQuery, PageResult};
@@ -42,6 +43,37 @@ pub trait AddressBook {
 }
 
 impl BookItem {
+
+    ///
+    /// Preprocess the submitted Address Book item to fix of fill missing data.
+    /// Ex. checks if the address is xpub then it sets the type accordingly
+    pub(crate) fn preprocess(self) -> Result<BookItem, InvalidValueError> {
+        let mut copy = self.clone();
+
+        // reuse existing id, or create a new id
+        if Uuid::parse_str(copy.get_id()).is_err() {
+            copy.set_id(Uuid::new_v4().to_string());
+        }
+
+        // if it's just a newly created record then fill it with creation/update timestamp
+        let now = Utc::now().naive_utc().timestamp_millis() as u64;
+        if copy.get_create_timestamp() == 0 {
+            copy.set_create_timestamp(now);
+        }
+        if copy.get_update_timestamp() == 0 {
+            copy.set_update_timestamp(now);
+        }
+
+        if let Some(mut address) = copy.address.clone().into_option() {
+            if ExtendedPubKey::from_str(address.address.as_str()).is_ok() {
+                address.set_field_type(Address_AddressType::XPUB);
+                copy.set_address(address)
+            }
+        }
+
+        Ok(copy)
+    }
+
     fn address_contains(&self, q: String) -> bool {
         if !self.has_address() {
             return false
@@ -54,6 +86,10 @@ impl BookItem {
     /// Validate the state of the Address Book Item to check that the data contains good values
     /// before storing it
     pub fn validate(&self) -> Result<(), InvalidValueError> {
+        if Uuid::parse_str(self.get_id()).is_err() {
+           return Err(InvalidValueError::Name("id".to_string()));
+        }
+
         let blockchain = BlockchainId::from_i32(self.blockchain as i32)
             .ok_or(InvalidValueError::Name("blockchain".to_string()))?;
         match self.address.clone().into_option() {
@@ -127,6 +163,9 @@ impl Default for Filter {
 
 #[cfg(test)]
 mod tests {
+    use std::str::FromStr;
+    use uuid::Uuid;
+    use crate::errors::InvalidValueError;
     use super::{Filter};
     use crate::proto::addressbook::{BookItem as proto_BookItem, Address as proto_Address, Address_AddressType};
 
@@ -360,6 +399,62 @@ mod tests {
             item.set_address(address.clone());
             assert!(item.validate().is_err());
         }
+    }
+
+    #[test]
+    fn preprocess_changes_type_to_xpub() {
+        let mut item = proto_BookItem::new();
+        item.id = "989d7648-13e3-4cb9-acfb-85464f063b34".to_string();
+        item.blockchain = 1;
+        let mut address = proto_Address::new();
+        address.set_address("xpub6EdMmyBKs9b1S54aHP13QGJRrpKzrnKUJnzLho64zSv5ekwGKA9dysTS6eTiypMMe8UbrFuZHo2hKB5MhWhEfGxAEzWv2tGUkPFnkvXLWWC".to_string());
+        address.set_field_type(Address_AddressType::PLAIN);
+        item.set_address(address.clone());
+
+        let processed = item.preprocess().expect("Preprocessed");
+
+        assert_eq!(processed.address.unwrap().get_field_type(), Address_AddressType::XPUB);
+    }
+
+    #[test]
+    fn preprocess_sets_a_new_id() {
+        let mut item = proto_BookItem::new();
+        item.blockchain = 1;
+        let mut address = proto_Address::new();
+        address.set_address("test".to_string());
+        item.set_address(address.clone());
+
+        let processed = item.preprocess().expect("Preprocessed");
+
+        assert!(processed.id.len() > 0);
+        assert!(Uuid::from_str(processed.id.as_str()).is_ok());
+    }
+
+    #[test]
+    fn preprocess_keeps_existing_id() {
+        let mut item = proto_BookItem::new();
+        item.id = "989d7648-13e3-4cb9-acfb-85464f063b34".to_string();
+        item.blockchain = 1;
+        let mut address = proto_Address::new();
+        address.set_address("test".to_string());
+        item.set_address(address.clone());
+
+        let processed = item.preprocess().expect("Preprocessed");
+
+        assert_eq!(processed.id, "989d7648-13e3-4cb9-acfb-85464f063b34".to_string());
+    }
+
+    #[test]
+    fn deny_no_id() {
+        let mut item = proto_BookItem::new();
+        item.blockchain = 1;
+        let address = proto_Address::new();
+        item.set_address(address.clone());
+
+        let result = item.validate();
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        assert_eq!(err, InvalidValueError::Name("id".to_string()))
     }
 
 }

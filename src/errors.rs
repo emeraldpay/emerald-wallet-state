@@ -1,6 +1,6 @@
 use protobuf::ProtobufError;
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum StateError {
     IOError,
     InvalidId,
@@ -8,7 +8,7 @@ pub enum StateError {
     CorruptedValue,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum InvalidValueError {
     Name(String),
     NameMessage(String, String),
