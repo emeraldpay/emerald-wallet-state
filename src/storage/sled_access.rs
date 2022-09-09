@@ -33,7 +33,7 @@ impl SledStorage {
     }
 
     pub fn get_addressbook(&self) -> AddressBookAccess {
-        return AddressBookAccess { db: self.db.clone() }
+        return AddressBookAccess { db: self.db.clone(), xpub: Arc::new(self.get_xpub_pos()) }
     }
 
     pub fn get_xpub_pos(&self) -> XPubPositionAccess {

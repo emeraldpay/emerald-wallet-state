@@ -1,14 +1,18 @@
 use std::collections::HashSet;
 use std::ops::{Bound, Deref};
+use std::str::FromStr;
 use std::sync::Arc;
+use bitcoin::Address;
 use protobuf::Message;
 use sled::{Batch, Db};
 use uuid::Uuid;
 use chrono::{Utc};
-use crate::access::addressbook::{AddressBook, Filter};
+use emerald_vault::blockchain::bitcoin::XPub;
+use crate::access::addressbook::{AddressBook, BookItemEnriched, Filter};
 use crate::access::pagination::{Cursor, PageQuery, PageResult};
+use crate::access::xpubpos::XPubPosition;
 use crate::errors::StateError;
-use crate::proto::addressbook::{BookItem as proto_BookItem};
+use crate::proto::addressbook::{Address_AddressType, BookItem as proto_BookItem};
 use crate::storage::indexing::{IndexConvert, IndexedValue, IndexEncoding, Indexing, QueryRanges};
 use crate::storage::trigrams::Trigram;
 
@@ -96,6 +100,7 @@ impl IndexedValue<IndexType> for proto_BookItem {
 
 pub struct AddressBookAccess {
     pub(crate) db: Arc<Db>,
+    pub(crate) xpub: Arc<dyn XPubPosition>,
 }
 
 impl AddressBookAccess {
@@ -123,6 +128,32 @@ impl AddressBookAccess {
                 }
             }
             Err(_) => None
+        }
+    }
+
+    ///
+    /// Enrich the stored data with addition values.
+    /// It expect that the original data is fully valid and has all required fields, otherwise may panic
+    fn enrich(&self, data: proto_BookItem) -> BookItemEnriched {
+        let address = data.address.clone().unwrap();
+        match address.get_field_type() {
+            Address_AddressType::PLAIN => {
+                BookItemEnriched {
+                    data,
+                    current_address: address.address.clone(),
+                }
+            }
+            Address_AddressType::XPUB => {
+                let index = self.xpub.get(address.address.clone()).unwrap_or(0);
+                let xpub = XPub::from_str(address.address.as_str()).expect("not an xpub");
+                let current_address = xpub.get_address::<Address>(index)
+                    .map(|a| a.to_string())
+                    .unwrap_or("".to_string());
+                BookItemEnriched {
+                    data,
+                    current_address,
+                }
+            }
         }
     }
 }
@@ -172,13 +203,13 @@ impl AddressBook for AddressBookAccess {
             .map(|_| ids)
     }
 
-    fn get(&self, id: Uuid) -> Result<Option<proto_BookItem>, StateError> {
+    fn get(&self, id: Uuid) -> Result<Option<BookItemEnriched>, StateError> {
         let item_key = AddressBookAccess::get_key(id);
         let result = self.db.get(item_key)?
             .map(|b| proto_BookItem::parse_from_bytes(b.as_ref()));
         match result {
             Some(parsed) => if let Ok(msg) = parsed {
-                Ok(Some(msg))
+                Ok(Some(self.enrich(msg)))
             } else {
                 Err(StateError::CorruptedValue)
             },
@@ -195,7 +226,7 @@ impl AddressBook for AddressBookAccess {
             .map_err(|e| StateError::from(e))
     }
 
-    fn query(&self, filter: Filter, page: PageQuery) -> Result<PageResult<proto_BookItem>, StateError> {
+    fn query(&self, filter: Filter, page: PageQuery) -> Result<PageResult<BookItemEnriched>, StateError> {
         let mut bounds = filter.get_index_bounds();
         if let Some(cursor) = page.cursor {
             bounds.0 = Bound::Excluded(cursor.offset)
@@ -224,7 +255,7 @@ impl AddressBook for AddressBookAccess {
                         if unprocessed {
                             if let Some(item) = self.get_item(item_key) {
                                 if filter.check_filter(&item) {
-                                    results.push(item);
+                                    results.push(self.enrich(item));
                                     if results.len() >= page.limit {
                                         done = true
                                     }
@@ -273,8 +304,9 @@ mod tests {
     use chrono::Utc;
     use crate::access::addressbook::{AddressBook, Filter};
     use crate::access::pagination::PageQuery;
+    use crate::access::xpubpos::XPubPosition;
     use crate::storage::sled_access::SledStorage;
-    use crate::proto::addressbook::{BookItem as proto_BookItem, Address as proto_Address};
+    use crate::proto::addressbook::{BookItem as proto_BookItem, Address as proto_Address, Address_AddressType};
 
     #[test]
     fn create_and_find() {
@@ -298,7 +330,7 @@ mod tests {
 
         let results = store.query(Filter::default(), PageQuery::default()).expect("queried");
         assert_eq!(results.values.len(), 1);
-        let mut result = results.values.get(0).unwrap().clone();
+        let mut result = results.values.get(0).unwrap().data.clone();
         result.update_timestamp = 0;
         assert_eq!(result, exp);
         assert!(results.cursor.is_none());
@@ -327,11 +359,83 @@ mod tests {
         assert!(result.is_ok());
         let result = result.unwrap();
         assert!(result.is_some());
-        let mut result = result.unwrap();
+        let mut result = result.unwrap().data;
 
         exp.id = id.clone().to_string();
         result.update_timestamp = 0;
         assert_eq!(result, exp);
+    }
+
+    #[test]
+    fn provide_with_same_address_if_plain() {
+        let tmp_dir = TempDir::new("test-addressbook").unwrap();
+        let access = SledStorage::open(tmp_dir.path().to_path_buf()).unwrap();
+        let store = access.get_addressbook();
+
+        let mut item = proto_BookItem::new();
+        item.create_timestamp = 1_647_313_850_992;
+        item.blockchain = 101;
+        let mut address = proto_Address::new();
+        address.address = "0xEdD91797204D3537fBaBDe0E0E42AaE99975f2Bb".to_string();
+        address.field_type = Address_AddressType::PLAIN;
+        item.set_address(address);
+
+        let results = store.add(vec![item.clone()]).expect("not saved");
+        let id = results[0];
+
+        let result = store.get(id).unwrap().expect("not loaded");
+
+        assert_eq!(result.current_address, "0xEdD91797204D3537fBaBDe0E0E42AaE99975f2Bb");
+    }
+
+    #[test]
+    fn provide_with_start_addr_on_xpub() {
+        let tmp_dir = TempDir::new("test-addressbook").unwrap();
+        let access = SledStorage::open(tmp_dir.path().to_path_buf()).unwrap();
+        let store = access.get_addressbook();
+
+        let mut item = proto_BookItem::new();
+        item.create_timestamp = 1_647_313_850_992;
+        item.blockchain = 101;
+        let mut address = proto_Address::new();
+        address.address = "zpub6ttpB5kpi5EbjzUhRC9gqYBJEnDE5TKxN3wsBLh4TM1JJz8ZKcpCjtrmvw8bAQVUkxTcMUBcHK9oGgAAhe97Xpd8HDNzzDx59u13wz32dyS".to_string();
+        address.field_type = Address_AddressType::XPUB;
+        item.set_address(address);
+
+        let results = store.add(vec![item.clone()]).expect("not saved");
+        let id = results[0];
+
+        let result = store.get(id).unwrap().expect("not loaded");
+
+        assert_eq!(result.current_address, "bc1qkr8kmwrpmw304x3pvthcqqc986v7hjajfem859");
+    }
+
+    #[test]
+    fn provide_with_current_addr_on_xpub() {
+        let tmp_dir = TempDir::new("test-addressbook").unwrap();
+        let access = SledStorage::open(tmp_dir.path().to_path_buf()).unwrap();
+
+        // tent because ski crew unknown labor blouse forest spice night peace fold cup august equal
+        let xpub = "zpub6ttpB5kpi5EbjzUhRC9gqYBJEnDE5TKxN3wsBLh4TM1JJz8ZKcpCjtrmvw8bAQVUkxTcMUBcHK9oGgAAhe97Xpd8HDNzzDx59u13wz32dyS";
+
+        let _ = access.get_xpub_pos().set_at_least(xpub.to_string(), 7).expect("xpub pos is not set");
+
+        let store = access.get_addressbook();
+
+        let mut item = proto_BookItem::new();
+        item.create_timestamp = 1_647_313_850_992;
+        item.blockchain = 101;
+        let mut address = proto_Address::new();
+        address.address = xpub.to_string();
+        address.field_type = Address_AddressType::XPUB;
+        item.set_address(address);
+
+        let results = store.add(vec![item.clone()]).expect("not saved");
+        let id = results[0];
+
+        let result = store.get(id).unwrap().expect("not loaded");
+
+        assert_eq!(result.current_address, "bc1q03p495zw08k8dvdl9guy5nw3kw7qmfsx2y7g3f");
     }
 
     #[test]
@@ -357,7 +461,7 @@ mod tests {
 
         let results = store.query(Filter::default(), PageQuery::default()).expect("queried");
         assert_eq!(results.values.len(), 1);
-        let mut result = results.values.get(0).unwrap().clone();
+        let mut result = results.values.get(0).unwrap().data.clone();
         result.update_timestamp = 0;
 
         assert_eq!(result, exp);
@@ -389,7 +493,7 @@ mod tests {
 
         let results = store.query(filter, PageQuery::default()).expect("queried");
         assert_eq!(results.values.len(), 1);
-        let result = results.values.get(0).unwrap().clone();
+        let result = results.values.get(0).unwrap().data.clone();
 
         assert_eq!(result.id, id);
     }
@@ -419,7 +523,7 @@ mod tests {
 
         let results = store.query(filter, PageQuery::default()).expect("queried");
         assert_eq!(results.values.len(), 1);
-        let result = results.values.get(0).unwrap().clone();
+        let result = results.values.get(0).unwrap().data.clone();
 
         assert_eq!(result.id, id);
     }
@@ -449,7 +553,7 @@ mod tests {
 
         let results = store.query(filter, PageQuery::default()).expect("queried");
         assert_eq!(results.values.len(), 1);
-        let result = results.values.get(0).unwrap().clone();
+        let result = results.values.get(0).unwrap().data.clone();
 
         assert_eq!(result.id, id);
     }
@@ -479,7 +583,7 @@ mod tests {
 
         let results = store.query(filter, PageQuery::default()).expect("queried");
         assert_eq!(results.values.len(), 1);
-        let result = results.values.get(0).unwrap().clone();
+        let result = results.values.get(0).unwrap().data.clone();
 
         assert_eq!(result.id, id);
     }
@@ -511,7 +615,7 @@ mod tests {
 
         let results = store.query(Filter::default(), PageQuery::default()).expect("queried");
         assert_eq!(results.values.len(), 1);
-        let mut result = results.values.get(0).unwrap().clone();
+        let mut result = results.values.get(0).unwrap().data.clone();
 
         assert!(result.update_timestamp >= ts_start);
         assert!(result.update_timestamp <= ts_end);
@@ -545,7 +649,7 @@ mod tests {
         };
         let results = store.query(filter, PageQuery::default()).expect("queried");
         assert_eq!(results.values.len(), 1);
-        assert_eq!(results.values[0].id, id.to_string())
+        assert_eq!(results.values[0].data.id, id.to_string())
 
     }
 
@@ -578,8 +682,8 @@ mod tests {
 
 
         assert_eq!(results_1.values.len(), 5);
-        assert_eq!(results_1.values[0].label, "Hello World! 0");
-        assert_eq!(results_1.values[4].label, "Hello World! 4");
+        assert_eq!(results_1.values[0].data.label, "Hello World! 0");
+        assert_eq!(results_1.values[4].data.label, "Hello World! 4");
         assert!(results_1.cursor.is_some());
 
         let results_2 = store.query(
@@ -592,8 +696,8 @@ mod tests {
 
 
         assert_eq!(results_2.values.len(), 5);
-        assert_eq!(results_2.values[0].label, "Hello World! 5");
-        assert_eq!(results_2.values[4].label, "Hello World! 9");
+        assert_eq!(results_2.values[0].data.label, "Hello World! 5");
+        assert_eq!(results_2.values[4].data.label, "Hello World! 9");
         assert!(results_2.cursor.is_some()); // because it doesn't know yet that there is no other entries
 
         let results_3 = store.query(

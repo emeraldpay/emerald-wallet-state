@@ -1,6 +1,6 @@
 use std::str::FromStr;
-use bitcoin::util::bip32::ExtendedPubKey;
 use chrono::Utc;
+use emerald_vault::blockchain::bitcoin::{AddressType, XPub};
 use protobuf::ProtobufEnum;
 use uuid::Uuid;
 use crate::access::pagination::{PageQuery, PageResult};
@@ -11,8 +11,18 @@ use crate::proto::transactions::BlockchainId;
 pub struct Filter {
     /// Filter by blockchain id
     pub blockchain: Option<u32>,
-    /// Filter by text containing in the label, decription or address itself
+    /// Filter by text containing in the label, description or address itself
     pub text: Option<String>,
+}
+
+///
+/// Address Book Item enriched with addition information for the client
+pub struct BookItemEnriched {
+    /// Original data
+    pub data: BookItem,
+    /// Current address. For a plain address it's the same as stored, but for Xpub it tried to find actual position,
+    /// or just put a first address in the xpub
+    pub current_address: String,
 }
 
 pub trait AddressBook {
@@ -27,7 +37,7 @@ pub trait AddressBook {
     ///
     /// Get an item if it exists.
     /// Returns `Ok(Some)` when it exists, or `Ok(None)` if not. Or `Err(StateError)` if cannot read
-    fn get(&self, id: Uuid) -> Result<Option<BookItem>, StateError>;
+    fn get(&self, id: Uuid) -> Result<Option<BookItemEnriched>, StateError>;
 
     ///
     /// Remove a record with the specified id, if it does exit. Otherwise does nothing, returns ok in both cases.
@@ -35,7 +45,7 @@ pub trait AddressBook {
 
     ///
     /// Query for records in storage using specified filter and page
-    fn query(&self, filter: Filter, page: PageQuery) -> Result<PageResult<BookItem>, StateError>;
+    fn query(&self, filter: Filter, page: PageQuery) -> Result<PageResult<BookItemEnriched>, StateError>;
 
     ///
     /// Update the store Address Book item with new values
@@ -65,7 +75,7 @@ impl BookItem {
         }
 
         if let Some(mut address) = copy.address.clone().into_option() {
-            if ExtendedPubKey::from_str(address.address.as_str()).is_ok() {
+            if XPub::from_str(address.address.as_str()).is_ok() {
                 address.set_field_type(Address_AddressType::XPUB);
                 copy.set_address(address)
             }
@@ -124,8 +134,12 @@ impl Address {
                 }
             }
             Address_AddressType::XPUB => {
-                let _ = ExtendedPubKey::from_str(self.address.as_str())
+                let xpub = XPub::from_str(self.address.as_str())
                     .map_err(|_| InvalidValueError::Other("Not an XPub address".to_string()))?;
+                if xpub.address_type != AddressType::P2WPKH {
+                    //TODO support all types here
+                    return Err(InvalidValueError::NameMessage("xpub".to_string(), format!("Unsupported address format: {:?}", xpub.address_type)))
+                }
             }
         }
         Ok(())
@@ -352,7 +366,7 @@ mod tests {
     #[test]
     fn accept_valid_bitcoin_xpub() {
         let addresses = vec![
-            "xpub6EdMmyBKs9b1S54aHP13QGJRrpKzrnKUJnzLho64zSv5ekwGKA9dysTS6eTiypMMe8UbrFuZHo2hKB5MhWhEfGxAEzWv2tGUkPFnkvXLWWC",
+            "zpub6ttpB5kpi5EbjzUhRC9gqYBJEnDE5TKxN3wsBLh4TM1JJz8ZKcpCjtrmvw8bAQVUkxTcMUBcHK9oGgAAhe97Xpd8HDNzzDx59u13wz32dyS",
         ];
 
         for value in addresses {
@@ -364,6 +378,25 @@ mod tests {
             address.set_field_type(Address_AddressType::XPUB);
             item.set_address(address.clone());
             assert!(item.validate().is_ok());
+        }
+    }
+
+    #[test]
+    fn deny_legacy_bitcoin_xpub() {
+        let addresses = vec![
+            "xpub6EdMmyBKs9b1S54aHP13QGJRrpKzrnKUJnzLho64zSv5ekwGKA9dysTS6eTiypMMe8UbrFuZHo2hKB5MhWhEfGxAEzWv2tGUkPFnkvXLWWC",
+            "ypub6YuN1y17CcjfeJAWxg6JmZLRzvKA1QS8bv2r5GcBzLdyZygovdNAmN7xZBCTLigigQ2aznuihHm23yxbXFf2AFuPEQgVnrknR3EWcWTBrYx",
+        ];
+
+        for value in addresses {
+            let mut item = proto_BookItem::new();
+            item.id = "989d7648-13e3-4cb9-acfb-85464f063b34".to_string();
+            item.blockchain = 1;
+            let mut address = proto_Address::new();
+            address.set_address(value.to_string());
+            address.set_field_type(Address_AddressType::XPUB);
+            item.set_address(address.clone());
+            assert!(item.validate().is_err());
         }
     }
 
@@ -408,6 +441,21 @@ mod tests {
         item.blockchain = 1;
         let mut address = proto_Address::new();
         address.set_address("xpub6EdMmyBKs9b1S54aHP13QGJRrpKzrnKUJnzLho64zSv5ekwGKA9dysTS6eTiypMMe8UbrFuZHo2hKB5MhWhEfGxAEzWv2tGUkPFnkvXLWWC".to_string());
+        address.set_field_type(Address_AddressType::PLAIN);
+        item.set_address(address.clone());
+
+        let processed = item.preprocess().expect("Preprocessed");
+
+        assert_eq!(processed.address.unwrap().get_field_type(), Address_AddressType::XPUB);
+    }
+
+    #[test]
+    fn preprocess_changes_type_to_xpub_84() {
+        let mut item = proto_BookItem::new();
+        item.id = "989d7648-13e3-4cb9-acfb-85464f063b34".to_string();
+        item.blockchain = 1;
+        let mut address = proto_Address::new();
+        address.set_address("zpub6ttpB5kpi5EbjzUhRC9gqYBJEnDE5TKxN3wsBLh4TM1JJz8ZKcpCjtrmvw8bAQVUkxTcMUBcHK9oGgAAhe97Xpd8HDNzzDx59u13wz32dyS".to_string());
         address.set_field_type(Address_AddressType::PLAIN);
         item.set_address(address.clone());
 
