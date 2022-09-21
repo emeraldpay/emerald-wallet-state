@@ -2,11 +2,11 @@ use std::collections::HashSet;
 use std::ops::{Bound, Deref};
 use std::str::FromStr;
 use std::sync::Arc;
-use chrono::{DateTime, TimeZone, Utc};
+use chrono::{TimeZone, Utc};
 use protobuf::{Message, ProtobufEnum};
 use sled::{Batch, Db};
 use uuid::Uuid;
-use crate::access::transactions::{Filter, RemoteCursor, Transactions, WalletRef};
+use crate::access::transactions::{Filter, RemoteCursor, Transactions};
 use crate::access::pagination::{PageResult, PageQuery, Cursor};
 use crate::errors::{StateError,InvalidValueError};
 use crate::proto::transactions::{Transaction as proto_Transaction, Cursor as proto_Cursor, TransactionMeta as proto_TransactionMeta};
@@ -59,7 +59,6 @@ impl IndexedValue<IndexType> for proto_Transaction {
 
     fn get_index(&self) -> Vec<IndexType> {
         let mut keys: Vec<IndexType> = Vec::new();
-        let blockchain: u32 = self.get_blockchain().value() as u32;
 
         let timestamps: Vec<u64> = vec![
             self.since_timestamp,
@@ -311,7 +310,6 @@ impl Transactions for TransactionsAccess {
 mod tests {
     use tempdir::TempDir;
     use std::str::FromStr;
-    use chrono::Utc;
     use uuid::Uuid;
     use crate::access::transactions::{AddressRef, Filter, Transactions, WalletRef};
     use crate::access::pagination::PageQuery;

@@ -3,7 +3,7 @@ use protobuf::ProtobufEnum;
 use uuid::Uuid;
 use crate::access::pagination::{PageQuery, PageResult};
 use crate::errors::StateError;
-use crate::proto::transactions::{Transaction, TransactionMeta};
+use crate::proto::transactions::{Transaction, TransactionMeta, State, Status};
 
 #[derive(Debug, Clone)]
 /// Reference to a wallet or its part
@@ -40,6 +40,10 @@ pub struct Filter {
     pub after: Option<DateTime<Utc>>,
     /// require a transaction known or confirmed before the specified moment
     pub before: Option<DateTime<Utc>>,
+    /// requre the following state (PREPARED/SUBMITTED/etc, see protobuf definition)
+    pub state: Option<State>,
+    /// requre the following satus (UNKNOWN/OK/FAILED, see protobuf definition)
+    pub status: Option<Status>,
 }
 
 impl Default for Filter {
@@ -50,6 +54,8 @@ impl Default for Filter {
             blockchains: None,
             after: None,
             before: None,
+            state: None,
+            status: None,
         }
     }
 }
@@ -75,6 +81,20 @@ impl Filter {
 
         if !blockchains_ok {
             return false;
+        }
+
+        let state_ok = if let Some(state) = &self.state {
+            t.state == *state
+        } else { true };
+        if !state_ok {
+            return false
+        }
+
+        let status_ok = if let Some(status) = &self.status {
+            t.status == *status
+        } else { true };
+        if !status_ok {
+            return false
         }
 
         let after_ok = match &self.after.map(|ts| ts.timestamp_millis() as u64) {
@@ -161,7 +181,7 @@ mod tests {
     use protobuf::ProtobufEnum;
     use uuid::Uuid;
     use crate::access::transactions::{AddressRef, Filter, WalletRef};
-    use crate::proto::transactions::{BlockchainId, Transaction as proto_Transaction, Change as proto_Change};
+    use crate::proto::transactions::{BlockchainId, Transaction as proto_Transaction, Change as proto_Change, State, Status};
 
     #[test]
     fn empty_filter_accept_any() {
@@ -348,6 +368,62 @@ mod tests {
             addresses: Some(vec![AddressRef::SingleAddress("0x36c1d19d4a2e9eb0ce3606eb48a0b86991c6218b".to_string())]),
             ..Filter::default()
         };
+        let ok = filter.check_filter(&tx);
+        assert!(!ok)
+    }
+
+    #[test]
+    fn filter_by_state() {
+        let mut tx = proto_Transaction::new();
+        tx.blockchain = BlockchainId::CHAIN_ETHEREUM;
+        tx.since_timestamp = 1_647_313_850_992;
+        tx.state = State::CONFIRMED;
+
+        let filter = Filter {
+            state: Some(State::CONFIRMED),
+            ..Filter::default()
+        };
+
+        let ok = filter.check_filter(&tx);
+        assert!(ok);
+
+        let filter = Filter {
+            state: None,
+            ..Filter::default()
+        };
+
+        let ok = filter.check_filter(&tx);
+        assert!(ok);
+
+        let filter = Filter {
+            state: Some(State::DROPPED),
+            ..Filter::default()
+        };
+
+        let ok = filter.check_filter(&tx);
+        assert!(!ok)
+    }
+
+    #[test]
+    fn filter_by_status() {
+        let mut tx = proto_Transaction::new();
+        tx.blockchain = BlockchainId::CHAIN_ETHEREUM;
+        tx.since_timestamp = 1_647_313_850_992;
+        tx.status = Status::FAILED;
+
+        let filter = Filter {
+            status: Some(Status::FAILED),
+            ..Filter::default()
+        };
+
+        let ok = filter.check_filter(&tx);
+        assert!(ok);
+
+        let filter = Filter {
+            status: Some(Status::OK),
+            ..Filter::default()
+        };
+
         let ok = filter.check_filter(&tx);
         assert!(!ok)
     }
