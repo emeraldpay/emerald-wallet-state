@@ -144,7 +144,7 @@ impl AddressBookAccess {
                 }
             }
             Address_AddressType::XPUB => {
-                let index = self.xpub.get(address.address.clone()).unwrap_or(0);
+                let index = self.xpub.get_next(address.address.clone()).unwrap_or(0);
                 let xpub = XPub::from_str(address.address.as_str()).expect("not an xpub");
                 let current_address = xpub.get_address::<Address>(index)
                     .map(|a| a.to_string())
@@ -418,7 +418,7 @@ mod tests {
         // tent because ski crew unknown labor blouse forest spice night peace fold cup august equal
         let xpub = "zpub6ttpB5kpi5EbjzUhRC9gqYBJEnDE5TKxN3wsBLh4TM1JJz8ZKcpCjtrmvw8bAQVUkxTcMUBcHK9oGgAAhe97Xpd8HDNzzDx59u13wz32dyS";
 
-        let _ = access.get_xpub_pos().set_at_least(xpub.to_string(), 7).expect("xpub pos is not set");
+        let _ = access.get_xpub_pos().set_at_least(xpub.to_string(), 6).expect("xpub pos is not set");
 
         let store = access.get_addressbook();
 
@@ -435,6 +435,7 @@ mod tests {
 
         let result = store.get(id).unwrap().expect("not loaded");
 
+        // it's the address at index 7, because above we told that the index 6 is used
         assert_eq!(result.current_address, "bc1q03p495zw08k8dvdl9guy5nw3kw7qmfsx2y7g3f");
     }
 

@@ -70,13 +70,19 @@ impl XPubPosition for XPubPositionAccess {
         Ok(())
     }
 
-    fn get(&self, xpub: String) -> Result<u32, StateError> {
+    fn get(&self, xpub: String) -> Result<Option<u32>, StateError> {
         let key = XPubPositionAccess::key(xpub)?;
         let current = self.db.get(&key)?
-            .map(|b| XPubPositionAccess::deserialize(&b) )
-            .or(Some(0u32))
-            .unwrap();
+            .map(|b| XPubPositionAccess::deserialize(&b) );
         Ok(current)
+    }
+
+    fn get_next(&self, xpub: String) -> Result<u32, StateError> {
+        let current = self.get(xpub)?;
+        match current {
+            Some(v) => Ok(v + 1),
+            None => Ok(0u32)
+        }
     }
 }
 
@@ -137,11 +143,11 @@ mod tests {
         access.set_at_least(xpub.clone(), 1).unwrap();
 
         let value = access.get(xpub.clone()).unwrap();
-        assert_eq!(value, 1);
+        assert_eq!(value, Some(1));
 
         access.set_at_least(xpub.clone(), 3).unwrap();
         let value = access.get(xpub.clone()).unwrap();
-        assert_eq!(value, 3);
+        assert_eq!(value, Some(3));
     }
 
     #[test]
@@ -153,21 +159,44 @@ mod tests {
 
         access.set_at_least(xpub.clone(), 5).unwrap();
         let value = access.get(xpub.clone()).unwrap();
-        assert_eq!(value, 5);
+        assert_eq!(value, Some(5));
 
         access.set_at_least(xpub.clone(), 3).unwrap();
         let value = access.get(xpub.clone()).unwrap();
-        assert_eq!(value, 5);
+        assert_eq!(value, Some(5));
     }
 
     #[test]
-    fn zero_by_default() {
+    fn current_is_nothing_by_default() {
         let tmp_dir = TempDir::new("xpubpos").unwrap();
         let store = SledStorage::open(tmp_dir.path().to_path_buf()).unwrap();
         let access = store.get_xpub_pos();
         let xpub = "zpub6tWCR2jxaKabCC5rHL8skXr6HsqLY58oihn7Dm6pTvNSa4gpde5T2eQT12Wid8h3ygM5yWWwSzbjmFRGHut6JBPDD6kaESPsQCrGSMSSwJy".to_string();
 
         let value = access.get(xpub.clone()).unwrap();
+        assert_eq!(value, None);
+    }
+
+    #[test]
+    fn next_is_zero_by_default() {
+        let tmp_dir = TempDir::new("xpubpos").unwrap();
+        let store = SledStorage::open(tmp_dir.path().to_path_buf()).unwrap();
+        let access = store.get_xpub_pos();
+        let xpub = "zpub6tWCR2jxaKabCC5rHL8skXr6HsqLY58oihn7Dm6pTvNSa4gpde5T2eQT12Wid8h3ygM5yWWwSzbjmFRGHut6JBPDD6kaESPsQCrGSMSSwJy".to_string();
+
+        let value = access.get_next(xpub.clone()).unwrap();
         assert_eq!(value, 0);
+    }
+
+    #[test]
+    fn next_is_after_current() {
+        let tmp_dir = TempDir::new("xpubpos").unwrap();
+        let store = SledStorage::open(tmp_dir.path().to_path_buf()).unwrap();
+        let access = store.get_xpub_pos();
+        let xpub = "zpub6tWCR2jxaKabCC5rHL8skXr6HsqLY58oihn7Dm6pTvNSa4gpde5T2eQT12Wid8h3ygM5yWWwSzbjmFRGHut6JBPDD6kaESPsQCrGSMSSwJy".to_string();
+
+        access.set_at_least(xpub.clone(), 5).unwrap();
+        let value = access.get_next(xpub.clone()).unwrap();
+        assert_eq!(value, 6);
     }
 }
