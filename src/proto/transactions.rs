@@ -1176,7 +1176,7 @@ impl Change {
         self.direction
     }
     pub fn clear_direction(&mut self) {
-        self.direction = Direction::EARN;
+        self.direction = Direction::RECEIVE;
     }
 
     // Param is passed by value, moved
@@ -1255,7 +1255,7 @@ impl ::protobuf::Message for Change {
         if self.change_type != Change_ChangeType::UNSPECIFIED {
             my_size += ::protobuf::rt::enum_size(7, self.change_type);
         }
-        if self.direction != Direction::EARN {
+        if self.direction != Direction::RECEIVE {
             my_size += ::protobuf::rt::enum_size(8, self.direction);
         }
         my_size += ::protobuf::rt::unknown_fields_size(self.get_unknown_fields());
@@ -1285,7 +1285,7 @@ impl ::protobuf::Message for Change {
         if self.change_type != Change_ChangeType::UNSPECIFIED {
             os.write_enum(7, ::protobuf::ProtobufEnum::value(&self.change_type))?;
         }
-        if self.direction != Direction::EARN {
+        if self.direction != Direction::RECEIVE {
             os.write_enum(8, ::protobuf::ProtobufEnum::value(&self.direction))?;
         }
         os.write_unknown_fields(self.get_unknown_fields())?;
@@ -1389,7 +1389,7 @@ impl ::protobuf::Clear for Change {
         self.asset.clear();
         self.amount.clear();
         self.change_type = Change_ChangeType::UNSPECIFIED;
-        self.direction = Direction::EARN;
+        self.direction = Direction::RECEIVE;
         self.unknown_fields.clear();
     }
 }
@@ -1883,8 +1883,8 @@ impl ::protobuf::reflect::ProtobufValue for Status {
 
 #[derive(Clone,PartialEq,Eq,Debug,Hash)]
 pub enum Direction {
-    EARN = 0,
-    SPEND = 1,
+    RECEIVE = 0,
+    SEND = 1,
 }
 
 impl ::protobuf::ProtobufEnum for Direction {
@@ -1894,16 +1894,16 @@ impl ::protobuf::ProtobufEnum for Direction {
 
     fn from_i32(value: i32) -> ::std::option::Option<Direction> {
         match value {
-            0 => ::std::option::Option::Some(Direction::EARN),
-            1 => ::std::option::Option::Some(Direction::SPEND),
+            0 => ::std::option::Option::Some(Direction::RECEIVE),
+            1 => ::std::option::Option::Some(Direction::SEND),
             _ => ::std::option::Option::None
         }
     }
 
     fn values() -> &'static [Self] {
         static values: &'static [Direction] = &[
-            Direction::EARN,
-            Direction::SPEND,
+            Direction::RECEIVE,
+            Direction::SEND,
         ];
         values
     }
@@ -1921,7 +1921,7 @@ impl ::std::marker::Copy for Direction {
 
 impl ::std::default::Default for Direction {
     fn default() -> Self {
-        Direction::EARN
+        Direction::RECEIVE
     }
 }
 
@@ -1967,8 +1967,8 @@ static file_descriptor_proto_data: &'static [u8] = b"\
     EBY\x10\x97N*N\n\x05State\x12\x0c\n\x08PREPARED\x10\0\x12\r\n\tSUBMITTED\
     \x10\n\x12\x0c\n\x08REPLACED\x10\x0b\x12\r\n\tCONFIRMED\x10\x0c\x12\x0b\
     \n\x07DROPPED\x10\x14*)\n\x06Status\x12\x0b\n\x07UNKNOWN\x10\0\x12\x06\n\
-    \x02OK\x10\x01\x12\n\n\x06FAILED\x10\x02*\x20\n\tDirection\x12\x08\n\x04\
-    EARN\x10\0\x12\t\n\x05SPEND\x10\x01J\xd3\x16\n\x06\x12\x04\0\0U\x01\n\
+    \x02OK\x10\x01\x12\n\n\x06FAILED\x10\x02*\"\n\tDirection\x12\x0b\n\x07RE\
+    CEIVE\x10\0\x12\x08\n\x04SEND\x10\x01J\xd8\x16\n\x06\x12\x04\0\0U\x01\n\
     \x08\n\x01\x0c\x12\x03\0\0\x12\n\x08\n\x01\x02\x12\x03\x01\0\x16\n\n\n\
     \x02\x04\0\x12\x04\x03\0\r\x01\n\n\n\x03\x04\0\x01\x12\x03\x03\x08\x13\n\
     \x0b\n\x04\x04\0\x02\0\x12\x03\x04\x02\x1e\n\x0c\n\x05\x04\0\x02\0\x06\
@@ -2058,10 +2058,10 @@ static file_descriptor_proto_data: &'static [u8] = b"\
     \n\x0c\n\x05\x05\x02\x02\x02\x01\x12\x034\x02\x08\n\x0c\n\x05\x05\x02\
     \x02\x02\x02\x12\x034\x0b\x0c\n\n\n\x02\x05\x03\x12\x047\0:\x01\n\n\n\
     \x03\x05\x03\x01\x12\x037\x05\x0e\n\x0b\n\x04\x05\x03\x02\0\x12\x038\x02\
-    \x0b\n\x0c\n\x05\x05\x03\x02\0\x01\x12\x038\x02\x06\n\x0c\n\x05\x05\x03\
-    \x02\0\x02\x12\x038\t\n\n\x0b\n\x04\x05\x03\x02\x01\x12\x039\x02\x0c\n\
-    \x0c\n\x05\x05\x03\x02\x01\x01\x12\x039\x02\x07\n\x0c\n\x05\x05\x03\x02\
-    \x01\x02\x12\x039\n\x0b\n\n\n\x02\x04\x03\x12\x04<\0M\x01\n\n\n\x03\x04\
+    \x0e\n\x0c\n\x05\x05\x03\x02\0\x01\x12\x038\x02\t\n\x0c\n\x05\x05\x03\
+    \x02\0\x02\x12\x038\x0c\r\n\x0b\n\x04\x05\x03\x02\x01\x12\x039\x02\x0b\n\
+    \x0c\n\x05\x05\x03\x02\x01\x01\x12\x039\x02\x06\n\x0c\n\x05\x05\x03\x02\
+    \x01\x02\x12\x039\t\n\n\n\n\x02\x04\x03\x12\x04<\0M\x01\n\n\n\x03\x04\
     \x03\x01\x12\x03<\x08\x0e\n\x0b\n\x04\x04\x03\x02\0\x12\x03=\x02\x17\n\
     \x0c\n\x05\x04\x03\x02\0\x05\x12\x03=\x02\x08\n\x0c\n\x05\x04\x03\x02\0\
     \x01\x12\x03=\t\x12\n\x0c\n\x05\x04\x03\x02\0\x03\x12\x03=\x15\x16\n\x0b\
@@ -2093,18 +2093,18 @@ static file_descriptor_proto_data: &'static [u8] = b"\
     \x0e\n\x07\x04\x03\x04\0\x02\x01\x01\x12\x03J\x04\x0c\n\x0e\n\x07\x04\
     \x03\x04\0\x02\x01\x02\x12\x03J\x0f\x10\n\r\n\x06\x04\x03\x04\0\x02\x02\
     \x12\x03K\x04\x0c\n\x0e\n\x07\x04\x03\x04\0\x02\x02\x01\x12\x03K\x04\x07\
-    \n\x0e\n\x07\x04\x03\x04\0\x02\x02\x02\x12\x03K\n\x0b\nK\n\x02\x04\x04\
-    \x12\x04Q\0U\x01\x1a?\n\x20Cursor\x20for\x20querying\x20the\x20transacti\
-    on\x20history\x20from\x20Emerald\x20API\n\n\n\n\x03\x04\x04\x01\x12\x03Q\
-    \x08\x0e\n\x0b\n\x04\x04\x04\x02\0\x12\x03R\x02\x15\n\x0c\n\x05\x04\x04\
-    \x02\0\x05\x12\x03R\x02\x08\n\x0c\n\x05\x04\x04\x02\0\x01\x12\x03R\t\x10\
-    \n\x0c\n\x05\x04\x04\x02\0\x03\x12\x03R\x13\x14\n\x0b\n\x04\x04\x04\x02\
-    \x01\x12\x03S\x02\x13\n\x0c\n\x05\x04\x04\x02\x01\x05\x12\x03S\x02\x08\n\
-    \x0c\n\x05\x04\x04\x02\x01\x01\x12\x03S\t\x0e\n\x0c\n\x05\x04\x04\x02\
-    \x01\x03\x12\x03S\x11\x12\n\x0b\n\x04\x04\x04\x02\x02\x12\x03T\x02\x10\n\
-    \x0c\n\x05\x04\x04\x02\x02\x05\x12\x03T\x02\x08\n\x0c\n\x05\x04\x04\x02\
-    \x02\x01\x12\x03T\t\x0b\n\x0c\n\x05\x04\x04\x02\x02\x03\x12\x03T\x0e\x0f\
-    b\x06proto3\
+    \n\x0e\n\x07\x04\x03\x04\0\x02\x02\x02\x12\x03K\n\x0b\nP\n\x02\x04\x04\
+    \x12\x04Q\0U\x01\x1aD\n\x20Cursor\x20used\x20for\x20querying\x20the\x20t\
+    ransaction\x20history\x20from\x20Emerald\x20API\n\n\n\n\x03\x04\x04\x01\
+    \x12\x03Q\x08\x0e\n\x0b\n\x04\x04\x04\x02\0\x12\x03R\x02\x15\n\x0c\n\x05\
+    \x04\x04\x02\0\x05\x12\x03R\x02\x08\n\x0c\n\x05\x04\x04\x02\0\x01\x12\
+    \x03R\t\x10\n\x0c\n\x05\x04\x04\x02\0\x03\x12\x03R\x13\x14\n\x0b\n\x04\
+    \x04\x04\x02\x01\x12\x03S\x02\x13\n\x0c\n\x05\x04\x04\x02\x01\x05\x12\
+    \x03S\x02\x08\n\x0c\n\x05\x04\x04\x02\x01\x01\x12\x03S\t\x0e\n\x0c\n\x05\
+    \x04\x04\x02\x01\x03\x12\x03S\x11\x12\n\x0b\n\x04\x04\x04\x02\x02\x12\
+    \x03T\x02\x10\n\x0c\n\x05\x04\x04\x02\x02\x05\x12\x03T\x02\x08\n\x0c\n\
+    \x05\x04\x04\x02\x02\x01\x12\x03T\t\x0b\n\x0c\n\x05\x04\x04\x02\x02\x03\
+    \x12\x03T\x0e\x0fb\x06proto3\
 ";
 
 static file_descriptor_proto_lazy: ::protobuf::rt::LazyV2<::protobuf::descriptor::FileDescriptorProto> = ::protobuf::rt::LazyV2::INIT;

@@ -54,8 +54,8 @@ enum Status {
 }
 
 enum Direction {
-  EARN = 0;
-  SPEND = 1;
+  RECEIVE = 0;
+  SEND = 1;
 }
 
 message Change {

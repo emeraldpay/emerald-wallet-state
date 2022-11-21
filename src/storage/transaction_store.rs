@@ -219,10 +219,16 @@ impl Transactions for TransactionsAccess {
 
     fn submit(&self, transactions: Vec<proto_Transaction>) -> Result<(), StateError> {
         let mut batch = Batch::default();
-        for tx in transactions {
+        for mut tx in transactions {
+            let tx_id = tx.tx_id.clone();
+            let tx_key = TransactionsAccess::get_key(tx.blockchain.value() as u32, tx_id.clone());
+
+            if let Some(existing_tx) = self.get_tx_by_key(tx_key.clone()) {
+                Indexing::remove_backref(tx_key.clone(), self.db.clone(), &mut batch)?;
+                tx = existing_tx.merge(tx);
+            }
+
             if let Ok(tx_bytes) = tx.write_to_bytes() {
-                let tx_id = tx.tx_id.clone();
-                let tx_key = TransactionsAccess::get_key(tx.blockchain.value() as u32, tx_id);
                 let indexes: Vec<String> = tx.get_index_keys();
                 Indexing::add_backrefs(&indexes, tx_key.clone(), &mut batch)?;
                 for idx in indexes {
@@ -314,7 +320,7 @@ mod tests {
     use crate::access::transactions::{AddressRef, Filter, Transactions, WalletRef};
     use crate::access::pagination::PageQuery;
     use crate::storage::transaction_store::{IndexType, IndexedValue};
-    use crate::proto::transactions::{BlockchainId, Transaction as proto_Transaction, Change as proto_Change, TransactionMeta as proto_TransactionMeta};
+    use crate::proto::transactions::{BlockchainId, Transaction as proto_Transaction, Change as proto_Change, TransactionMeta as proto_TransactionMeta, Direction, Change_ChangeType};
     use crate::storage::indexing::IndexEncoding;
     use crate::storage::sled_access::SledStorage;
 
@@ -420,6 +426,48 @@ mod tests {
 
         let db_size = access.db.scan_prefix("").count();
         assert_eq!(db_size, 0);
+    }
+
+    #[test]
+    fn create_and_update_tx_using_merge() {
+        // doesn't do full merge test, only checks that it applied
+
+        let tmp_dir = TempDir::new("create_and_find_tx").unwrap();
+        let access = SledStorage::open(tmp_dir.path().to_path_buf()).unwrap();
+        let transactions = access.get_transactions();
+
+        let mut tx = proto_Transaction::new();
+        tx.blockchain = BlockchainId::CHAIN_ETHEREUM;
+        tx.tx_id = "0x2f761cbf069962cf3a82ab0d9b11c453e5d0caf4fb6d192624360def7bd1e81b".to_string();
+        tx.since_timestamp = 1_647_313_850_992;
+        let mut change1 = proto_Change::new();
+        change1.wallet_id = "72279ede-44c4-4951-925b-f51a7b9e929a".to_string();
+        change1.entry_id = 0;
+        change1.address = "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48".to_string();
+        change1.amount = "100".to_string();
+        change1.direction = Direction::SEND;
+        change1.change_type = Change_ChangeType::TRANSFER;
+        tx.changes.push(change1.clone());
+
+        transactions.submit(vec![tx.clone()]).expect("not saved");
+
+        let mut tx_update = tx.clone();
+        let mut change1_update = change1.clone();
+        change1_update.clear_wallet_id();
+        tx_update.clear_changes();
+        tx_update.changes.push(change1_update);
+
+        transactions.submit(vec![tx_update.clone()]).expect("not saved");
+
+        let tx_read = transactions.get_tx(100, "0x2f761cbf069962cf3a82ab0d9b11c453e5d0caf4fb6d192624360def7bd1e81b");
+
+        assert!(tx_read.is_some());
+        let tx_read = tx_read.unwrap();
+
+        assert_eq!(tx_read.changes.len(), 1);
+        let change_read = tx_read.changes.get(0).unwrap();
+
+        assert_eq!(change_read.wallet_id, "72279ede-44c4-4951-925b-f51a7b9e929a".to_string());
     }
 
     #[test]
