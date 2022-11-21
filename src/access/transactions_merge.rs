@@ -20,6 +20,7 @@
 //! when we created the tx, and the following updates may not know our share.
 //!
 //!
+use std::cmp;
 use protobuf::RepeatedField;
 use crate::proto::transactions::{Change, Change_ChangeType, Transaction};
 
@@ -27,6 +28,7 @@ impl Transaction {
 
     pub(crate) fn merge(self, update: Transaction) -> Transaction {
         let mut merged = update.clone();
+        merged.version = cmp::max(self.version, update.version) + 1;
         if update.confirm_timestamp < self.confirm_timestamp {
             merged.set_confirm_timestamp(self.confirm_timestamp);
         }
@@ -150,9 +152,36 @@ mod tests {
         change1.change_type = Change_ChangeType::TRANSFER;
         tx.changes.push(change1);
 
-        let merged = tx.clone().merge(tx.clone());
+        let mut merged = tx.clone().merge(tx.clone());
+        merged.clear_version();
 
         assert_eq!(tx, merged);
+    }
+
+    #[test]
+    fn update_version_to_next() {
+        let mut tx1 = Transaction::new();
+        tx1.blockchain = BlockchainId::CHAIN_ETHEREUM;
+        tx1.since_timestamp = 1_647_313_850_992;
+
+        let tx2 = tx1.clone();
+
+        let merged = tx1.clone().merge(tx2.clone());
+
+        assert!(merged.version > tx1.version);
+        assert!(merged.version > tx2.version);
+
+        let merged2 = merged.clone().merge(tx2.clone());
+
+        assert!(merged2.version > merged.version);
+
+        let mut tx3 = tx1.clone();
+        tx3.version = 100;
+
+        let merged3 = merged2.clone().merge(tx3.clone());
+        assert!(merged3.version > merged2.version);
+        assert!(merged3.version > tx3.version);
+        assert!(merged3.version > 100); // we suppose that the version starts with 0, so with the current implementation it holds true
     }
 
     #[test]
@@ -178,7 +207,8 @@ mod tests {
         tx_new.changes.clear();
         tx_new.changes.push(change1_copy);
 
-        let merged = tx.clone().merge(tx_new);
+        let mut merged = tx.clone().merge(tx_new);
+        merged.clear_version();
 
         assert_eq!(tx, merged);
     }
@@ -204,7 +234,8 @@ mod tests {
         tx_new.changes.clear();
         tx_new.changes.push(change1_copy);
 
-        let merged = tx.clone().merge(tx_new.clone());
+        let mut merged = tx.clone().merge(tx_new.clone());
+        merged.clear_version();
 
         assert_eq!(tx_new, merged);
     }

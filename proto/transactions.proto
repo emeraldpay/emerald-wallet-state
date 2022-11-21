@@ -11,6 +11,7 @@ message Transaction {
   BlockRef block = 7;
   Status status = 8;
   repeated Change changes = 9;
+  uint64 version = 10;
 }
 
 message TransactionMeta {
