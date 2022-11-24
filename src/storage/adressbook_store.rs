@@ -440,6 +440,64 @@ mod tests {
     }
 
     #[test]
+    fn provide_with_current_addr_on_legacy_xpub() {
+        let tmp_dir = TempDir::new("test-addressbook").unwrap();
+        let access = SledStorage::open(tmp_dir.path().to_path_buf()).unwrap();
+
+        // tent because ski crew unknown labor blouse forest spice night peace fold cup august equal
+        let xpub = "xpub6EGGMhwZcWcBgZmNVyF9PTeMWf4nSczpjBFxm3xjQtXW6dMx7ttX8CKwC7VpAsDuXD26ZDrxauLonnRo1j2YWyVJ7vxDAdgGFBccG7poexi";
+
+        let _ = access.get_xpub_pos().set_at_least(xpub.to_string(), 6).expect("xpub pos is not set");
+
+        let store = access.get_addressbook();
+
+        let mut item = proto_BookItem::new();
+        item.create_timestamp = 1_647_313_850_992;
+        item.blockchain = 101;
+        let mut address = proto_Address::new();
+        address.address = xpub.to_string();
+        address.field_type = Address_AddressType::XPUB;
+        item.set_address(address);
+
+        let results = store.add(vec![item.clone()]).expect("not saved");
+        let id = results[0];
+
+        let result = store.get(id).unwrap().expect("not loaded");
+
+        // it's the address at index 7, because above we told that the index 6 is used
+        assert_eq!(result.current_address, "15g6Z87Pxm4qTwCtm19P2PWTMKNGStbQNg");
+    }
+
+    #[test]
+    fn provide_with_current_addr_on_segwit_xpub() {
+        let tmp_dir = TempDir::new("test-addressbook").unwrap();
+        let access = SledStorage::open(tmp_dir.path().to_path_buf()).unwrap();
+
+        // tent because ski crew unknown labor blouse forest spice night peace fold cup august equal
+        let xpub = "ypub6YuN1y17CcjfeJAWxg6JmZLRzvKA1QS8bv2r5GcBzLdyZygovdNAmN7xZBCTLigigQ2aznuihHm23yxbXFf2AFuPEQgVnrknR3EWcWTBrYx";
+
+        let _ = access.get_xpub_pos().set_at_least(xpub.to_string(), 6).expect("xpub pos is not set");
+
+        let store = access.get_addressbook();
+
+        let mut item = proto_BookItem::new();
+        item.create_timestamp = 1_647_313_850_992;
+        item.blockchain = 101;
+        let mut address = proto_Address::new();
+        address.address = xpub.to_string();
+        address.field_type = Address_AddressType::XPUB;
+        item.set_address(address);
+
+        let results = store.add(vec![item.clone()]).expect("not saved");
+        let id = results[0];
+
+        let result = store.get(id).unwrap().expect("not loaded");
+
+        // it's the address at index 7, because above we told that the index 6 is used
+        assert_eq!(result.current_address, "3GwT9ooSgkXztQiYZrFWdtePdDLomqqojx");
+    }
+
+    #[test]
     fn create_existing_and_find() {
         let tmp_dir = TempDir::new("test-addressbook").unwrap();
         let access = SledStorage::open(tmp_dir.path().to_path_buf()).unwrap();

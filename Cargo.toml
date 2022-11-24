@@ -5,7 +5,9 @@ edition = "2021"
 license = "Apache2"
 
 [dependencies]
-emerald-vault = "0.31.0"
+#emerald-vault = "0.31.0"
+#emerald-vault = { path = "../emerald-rs" }
+emerald-vault = { git = "https://github.com/emeraldpay/emerald-vault", branch = "master" }
 
 chrono = "0.4"
 uuid = { version = "0.8", features = ["v4"] }

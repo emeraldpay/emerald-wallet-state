@@ -136,8 +136,10 @@ impl Address {
             Address_AddressType::XPUB => {
                 let xpub = XPub::from_str(self.address.as_str())
                     .map_err(|_| InvalidValueError::Other("Not an XPub address".to_string()))?;
-                if xpub.address_type != AddressType::P2WPKH {
-                    //TODO support all types here
+                // currently we support only bench32, legacy and segwit addresses
+                if xpub.address_type != AddressType::P2WPKH
+                    && xpub.address_type != AddressType::P2PKH
+                    && xpub.address_type != AddressType::P2WPKHinP2SH {
                     return Err(InvalidValueError::NameMessage("xpub".to_string(), format!("Unsupported address format: {:?}", xpub.address_type)))
                 }
             }
@@ -378,25 +380,6 @@ mod tests {
             address.set_field_type(Address_AddressType::XPUB);
             item.set_address(address.clone());
             assert!(item.validate().is_ok());
-        }
-    }
-
-    #[test]
-    fn deny_legacy_bitcoin_xpub() {
-        let addresses = vec![
-            "xpub6EdMmyBKs9b1S54aHP13QGJRrpKzrnKUJnzLho64zSv5ekwGKA9dysTS6eTiypMMe8UbrFuZHo2hKB5MhWhEfGxAEzWv2tGUkPFnkvXLWWC",
-            "ypub6YuN1y17CcjfeJAWxg6JmZLRzvKA1QS8bv2r5GcBzLdyZygovdNAmN7xZBCTLigigQ2aznuihHm23yxbXFf2AFuPEQgVnrknR3EWcWTBrYx",
-        ];
-
-        for value in addresses {
-            let mut item = proto_BookItem::new();
-            item.id = "989d7648-13e3-4cb9-acfb-85464f063b34".to_string();
-            item.blockchain = 1;
-            let mut address = proto_Address::new();
-            address.set_address(value.to_string());
-            address.set_field_type(Address_AddressType::XPUB);
-            item.set_address(address.clone());
-            assert!(item.validate().is_err());
         }
     }
 
