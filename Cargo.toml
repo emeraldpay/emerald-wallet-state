@@ -2,7 +2,13 @@
 name = "emerald-wallet-state"
 version = "0.1.0"
 edition = "2021"
-license = "Apache2"
+license = "Apache-2.0"
+authors = ["Igor Artamonov", "Emerald Team"]
+description = "Emerald Wallet State storage"
+homepage = "https://emerald.cash"
+repository = "https://github.com/emeraldpay/emerald-wallet-state"
+documentation = "https://docs.rs/emerald-wallet-state"
+readme = "crates.md"
 
 [dependencies]
 emerald-vault = "0.32.0"
