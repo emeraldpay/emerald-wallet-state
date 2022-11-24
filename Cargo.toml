@@ -5,9 +5,9 @@ edition = "2021"
 license = "Apache2"
 
 [dependencies]
-#emerald-vault = "0.31.0"
+emerald-vault = "0.32.0"
 #emerald-vault = { path = "../emerald-rs" }
-emerald-vault = { git = "https://github.com/emeraldpay/emerald-vault", branch = "master" }
+#emerald-vault = { git = "https://github.com/emeraldpay/emerald-vault", branch = "master" }
 
 chrono = "0.4"
 uuid = { version = "0.8", features = ["v4"] }
@@ -16,7 +16,7 @@ protobuf = { version = "2.25", features = ["with-bytes"] }
 enum-display-derive = "0.1"
 fs_extra = "1.2"
 regex = "1.6"
-bitcoin = "~0.28"
+bitcoin = "~0.29"
 
 [dev-dependencies]
 tempdir = "0.3"
