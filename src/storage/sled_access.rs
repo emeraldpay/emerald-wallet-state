@@ -3,6 +3,7 @@ use std::sync::Arc;
 use sled::{Db};
 use crate::errors::StateError;
 use crate::storage::adressbook_store::AddressBookAccess;
+use crate::storage::balance_store::BalanceAccess;
 use crate::storage::default_path;
 use crate::storage::transaction_store::{TransactionsAccess};
 use crate::storage::xpubpos_store::XPubPositionAccess;
@@ -38,5 +39,9 @@ impl SledStorage {
 
     pub fn get_xpub_pos(&self) -> XPubPositionAccess {
         return XPubPositionAccess { db: self.db.clone() }
+    }
+
+    pub fn get_balance(&self) -> BalanceAccess {
+        return BalanceAccess { db: self.db.clone() }
     }
 }

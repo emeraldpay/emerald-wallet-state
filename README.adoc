@@ -18,6 +18,7 @@ Uses a https://github.com/spacejam/sled[Sled] database, with _keys_ as strings, 
 protoc --rust_out=src/proto --proto_path=./proto transactions.proto
 protoc --rust_out=src/proto --proto_path=./proto addressbook.proto
 protoc --rust_out=src/proto --proto_path=./proto internal.proto
+protoc --rust_out=src/proto --proto_path=./proto balance.proto
 ----
 
 == License

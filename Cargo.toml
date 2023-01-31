@@ -23,6 +23,8 @@ enum-display-derive = "0.1"
 fs_extra = "1.2"
 regex = "1.6"
 bitcoin = "~0.29"
+num-bigint = "0.4.3"
+num-traits = "0.2.15"
 
 [dev-dependencies]
 tempdir = "0.3"
