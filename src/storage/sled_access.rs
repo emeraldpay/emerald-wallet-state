@@ -4,6 +4,7 @@ use sled::{Db};
 use crate::errors::StateError;
 use crate::storage::adressbook_store::AddressBookAccess;
 use crate::storage::balance_store::BalanceAccess;
+use crate::storage::cache_store::CacheAccess;
 use crate::storage::default_path;
 use crate::storage::transaction_store::{TransactionsAccess};
 use crate::storage::xpubpos_store::XPubPositionAccess;
@@ -41,7 +42,15 @@ impl SledStorage {
         return XPubPositionAccess { db: self.db.clone() }
     }
 
+    ///
+    /// Cache for address balances
     pub fn get_balance(&self) -> BalanceAccess {
         return BalanceAccess { db: self.db.clone() }
+    }
+
+    ///
+    /// Generic persistent cache
+    pub fn get_cache(&self) -> CacheAccess {
+        return CacheAccess { db: self.db.clone() }
     }
 }

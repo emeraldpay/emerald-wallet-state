@@ -19,6 +19,7 @@ protoc --rust_out=src/proto --proto_path=./proto transactions.proto
 protoc --rust_out=src/proto --proto_path=./proto addressbook.proto
 protoc --rust_out=src/proto --proto_path=./proto internal.proto
 protoc --rust_out=src/proto --proto_path=./proto balance.proto
+protoc --rust_out=src/proto --proto_path=./proto cache.proto
 ----
 
 == License

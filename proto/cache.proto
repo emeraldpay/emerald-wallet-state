@@ -1,0 +1,9 @@
+syntax = "proto3";
+package emerald.state;
+
+message Cache {
+  string id = 1;
+  uint64 ts = 2;
+  uint64 ttl = 3;
+  string value = 4;
+}
