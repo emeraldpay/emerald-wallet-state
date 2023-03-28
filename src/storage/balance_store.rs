@@ -79,7 +79,7 @@ mod tests {
     use chrono::{TimeZone, Utc};
     use num_bigint::BigUint;
     use tempdir::TempDir;
-    use crate::access::balance::{Balance, Balances};
+    use crate::access::balance::{Balance, Balances, Utxo};
     use crate::storage::sled_access::SledStorage;
 
     #[test]
@@ -106,7 +106,8 @@ mod tests {
             blockchain: 100,
             asset: "ETHER".to_string(),
             amount: BigUint::from(100u32),
-            ts: Utc.timestamp_millis(1675123456789)
+            ts: Utc.timestamp_millis(1675123456789),
+            ..Balance::default()
         };
 
         let added = balances.set(balance0.clone());
@@ -131,7 +132,8 @@ mod tests {
             blockchain: 100,
             asset: "ETHER".to_string(),
             amount: BigUint::from(100u32),
-            ts: Utc.timestamp_millis(1675123456789)
+            ts: Utc.timestamp_millis(1675123456789),
+            ..Balance::default()
         };
 
         let balance1 = Balance {
@@ -139,7 +141,8 @@ mod tests {
             blockchain: 100,
             asset: "ERC20:0xdAC17F958D2ee523a2206206994597C13D831ec7".to_string(),
             amount: BigUint::from(200u32),
-            ts: Utc.timestamp_millis(1675123456789)
+            ts: Utc.timestamp_millis(1675123456789),
+            ..Balance::default()
         };
 
         let added = balances.set(balance0.clone());
@@ -167,7 +170,8 @@ mod tests {
             blockchain: 1,
             asset: "BTC".to_string(),
             amount: BigUint::from(1000u32),
-            ts: Utc.timestamp_millis(1675123456789)
+            ts: Utc.timestamp_millis(1675123456789),
+            ..Balance::default()
         };
 
         let balance1 = Balance {
@@ -175,7 +179,8 @@ mod tests {
             blockchain: 1,
             asset: "BTC".to_string(),
             amount: BigUint::from(2000u32),
-            ts: Utc.timestamp_millis(1675123456789)
+            ts: Utc.timestamp_millis(1675123456789),
+            ..Balance::default()
         };
 
         let added = balances.set(balance0.clone());
@@ -202,7 +207,8 @@ mod tests {
             blockchain: 100,
             asset: "ETHER".to_string(),
             amount: BigUint::from(100u32),
-            ts: Utc.timestamp_millis(1675123456789)
+            ts: Utc.timestamp_millis(1675123456789),
+            ..Balance::default()
         };
 
         balances.set(balance0.clone()).unwrap();
@@ -217,4 +223,74 @@ mod tests {
         assert_eq!(act.len(), 0);
     }
 
+    #[test]
+    fn store_utxo() {
+        let tmp_dir = TempDir::new("balance").unwrap();
+        let access = SledStorage::open(tmp_dir.path().to_path_buf()).unwrap();
+        let balances = access.get_balance();
+
+        let balance0 = Balance {
+            address: "bc1qywz558j2ja7fwmg32jupn02qvla5zm3dvggpqv".to_string(),
+            blockchain: 1,
+            asset: "BTC".to_string(),
+            amount: BigUint::from(23045u64),
+            ts: Utc.timestamp_millis(1675123456789),
+            utxo: vec![
+                Utxo {
+                    txid: "01ff3e2b6d2f1e52aa548e79b8f43d0091e9541bc4f70cda4e6549aaf836268b".to_string(),
+                    vout: 1,
+                    amount: 23045
+                }
+            ],
+            ..Balance::default()
+        };
+
+        let added = balances.set(balance0.clone());
+        assert!(added.is_ok());
+
+        let act = balances.list("bc1qywz558j2ja7fwmg32jupn02qvla5zm3dvggpqv".to_string());
+
+        assert!(act.is_ok());
+        let act = act.unwrap();
+        assert_eq!(act.len(), 1);
+        assert_eq!(act[0].utxo.len(), 1);
+        assert_eq!(act[0].utxo[0], Utxo {
+            txid: "01ff3e2b6d2f1e52aa548e79b8f43d0091e9541bc4f70cda4e6549aaf836268b".to_string(),
+            vout: 1,
+            amount: 23045
+        });
+    }
+
+    #[test]
+    fn ignore_invalid_utxo() {
+        let tmp_dir = TempDir::new("balance").unwrap();
+        let access = SledStorage::open(tmp_dir.path().to_path_buf()).unwrap();
+        let balances = access.get_balance();
+
+        let balance0 = Balance {
+            address: "bc1qywz558j2ja7fwmg32jupn02qvla5zm3dvggpqv".to_string(),
+            blockchain: 1,
+            asset: "BTC".to_string(),
+            amount: BigUint::from(23045u64),
+            ts: Utc.timestamp_millis(1675123456789),
+            utxo: vec![
+                Utxo {
+                    txid: "01ff3e2b6d2f1e52aa548e79b8f43d0091e9541bc4f70cda4e6549aaf836268b".to_string(),
+                    vout: 1,
+                    amount: 12345
+                }
+            ],
+            ..Balance::default()
+        };
+
+        let added = balances.set(balance0.clone());
+        assert!(added.is_ok());
+
+        let act = balances.list("bc1qywz558j2ja7fwmg32jupn02qvla5zm3dvggpqv".to_string());
+
+        assert!(act.is_ok());
+        let act = act.unwrap();
+        assert_eq!(act.len(), 1);
+        assert_eq!(act[0].utxo.len(), 0);
+    }
 }

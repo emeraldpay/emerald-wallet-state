@@ -7,8 +7,17 @@ message Balance {
   uint32 blockchain = 3;
   string asset = 4;
   string amount = 5;
+  // optional utxo details
+  repeated Utxo utxo = 6;
 }
 
 message BalanceBundle {
   repeated Balance balances = 1;
+}
+
+message Utxo {
+  string txid = 1;
+  uint32 vout = 2;
+  // we use it only for bitcoin, so 64 bit number is enough
+  uint64 amount = 3;
 }

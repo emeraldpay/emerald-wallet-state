@@ -31,6 +31,7 @@ pub struct Balance {
     pub blockchain: u32,
     pub asset: ::std::string::String,
     pub amount: ::std::string::String,
+    pub utxo: ::protobuf::RepeatedField<Utxo>,
     // special fields
     pub unknown_fields: ::protobuf::UnknownFields,
     pub cached_size: ::protobuf::CachedSize,
@@ -154,10 +155,40 @@ impl Balance {
     pub fn take_amount(&mut self) -> ::std::string::String {
         ::std::mem::replace(&mut self.amount, ::std::string::String::new())
     }
+
+    // repeated .emerald.state.Utxo utxo = 6;
+
+
+    pub fn get_utxo(&self) -> &[Utxo] {
+        &self.utxo
+    }
+    pub fn clear_utxo(&mut self) {
+        self.utxo.clear();
+    }
+
+    // Param is passed by value, moved
+    pub fn set_utxo(&mut self, v: ::protobuf::RepeatedField<Utxo>) {
+        self.utxo = v;
+    }
+
+    // Mutable pointer to the field.
+    pub fn mut_utxo(&mut self) -> &mut ::protobuf::RepeatedField<Utxo> {
+        &mut self.utxo
+    }
+
+    // Take field
+    pub fn take_utxo(&mut self) -> ::protobuf::RepeatedField<Utxo> {
+        ::std::mem::replace(&mut self.utxo, ::protobuf::RepeatedField::new())
+    }
 }
 
 impl ::protobuf::Message for Balance {
     fn is_initialized(&self) -> bool {
+        for v in &self.utxo {
+            if !v.is_initialized() {
+                return false;
+            }
+        };
         true
     }
 
@@ -188,6 +219,9 @@ impl ::protobuf::Message for Balance {
                 5 => {
                     ::protobuf::rt::read_singular_proto3_string_into(wire_type, is, &mut self.amount)?;
                 },
+                6 => {
+                    ::protobuf::rt::read_repeated_message_into(wire_type, is, &mut self.utxo)?;
+                },
                 _ => {
                     ::protobuf::rt::read_unknown_or_skip_group(field_number, wire_type, is, self.mut_unknown_fields())?;
                 },
@@ -215,6 +249,10 @@ impl ::protobuf::Message for Balance {
         if !self.amount.is_empty() {
             my_size += ::protobuf::rt::string_size(5, &self.amount);
         }
+        for value in &self.utxo {
+            let len = value.compute_size();
+            my_size += 1 + ::protobuf::rt::compute_raw_varint32_size(len) + len;
+        };
         my_size += ::protobuf::rt::unknown_fields_size(self.get_unknown_fields());
         self.cached_size.set(my_size);
         my_size
@@ -236,6 +274,11 @@ impl ::protobuf::Message for Balance {
         if !self.amount.is_empty() {
             os.write_string(5, &self.amount)?;
         }
+        for v in &self.utxo {
+            os.write_tag(6, ::protobuf::wire_format::WireTypeLengthDelimited)?;
+            os.write_raw_varint32(v.get_cached_size())?;
+            v.write_to_with_cached_sizes(os)?;
+        };
         os.write_unknown_fields(self.get_unknown_fields())?;
         ::std::result::Result::Ok(())
     }
@@ -299,6 +342,11 @@ impl ::protobuf::Message for Balance {
                 |m: &Balance| { &m.amount },
                 |m: &mut Balance| { &mut m.amount },
             ));
+            fields.push(::protobuf::reflect::accessor::make_repeated_field_accessor::<_, ::protobuf::types::ProtobufTypeMessage<Utxo>>(
+                "utxo",
+                |m: &Balance| { &m.utxo },
+                |m: &mut Balance| { &mut m.utxo },
+            ));
             ::protobuf::reflect::MessageDescriptor::new_pb_name::<Balance>(
                 "Balance",
                 fields,
@@ -320,6 +368,7 @@ impl ::protobuf::Clear for Balance {
         self.blockchain = 0;
         self.asset.clear();
         self.amount.clear();
+        self.utxo.clear();
         self.unknown_fields.clear();
     }
 }
@@ -502,34 +551,281 @@ impl ::protobuf::reflect::ProtobufValue for BalanceBundle {
     }
 }
 
+#[derive(PartialEq,Clone,Default)]
+pub struct Utxo {
+    // message fields
+    pub txid: ::std::string::String,
+    pub vout: u32,
+    pub amount: u64,
+    // special fields
+    pub unknown_fields: ::protobuf::UnknownFields,
+    pub cached_size: ::protobuf::CachedSize,
+}
+
+impl<'a> ::std::default::Default for &'a Utxo {
+    fn default() -> &'a Utxo {
+        <Utxo as ::protobuf::Message>::default_instance()
+    }
+}
+
+impl Utxo {
+    pub fn new() -> Utxo {
+        ::std::default::Default::default()
+    }
+
+    // string txid = 1;
+
+
+    pub fn get_txid(&self) -> &str {
+        &self.txid
+    }
+    pub fn clear_txid(&mut self) {
+        self.txid.clear();
+    }
+
+    // Param is passed by value, moved
+    pub fn set_txid(&mut self, v: ::std::string::String) {
+        self.txid = v;
+    }
+
+    // Mutable pointer to the field.
+    // If field is not initialized, it is initialized with default value first.
+    pub fn mut_txid(&mut self) -> &mut ::std::string::String {
+        &mut self.txid
+    }
+
+    // Take field
+    pub fn take_txid(&mut self) -> ::std::string::String {
+        ::std::mem::replace(&mut self.txid, ::std::string::String::new())
+    }
+
+    // uint32 vout = 2;
+
+
+    pub fn get_vout(&self) -> u32 {
+        self.vout
+    }
+    pub fn clear_vout(&mut self) {
+        self.vout = 0;
+    }
+
+    // Param is passed by value, moved
+    pub fn set_vout(&mut self, v: u32) {
+        self.vout = v;
+    }
+
+    // uint64 amount = 3;
+
+
+    pub fn get_amount(&self) -> u64 {
+        self.amount
+    }
+    pub fn clear_amount(&mut self) {
+        self.amount = 0;
+    }
+
+    // Param is passed by value, moved
+    pub fn set_amount(&mut self, v: u64) {
+        self.amount = v;
+    }
+}
+
+impl ::protobuf::Message for Utxo {
+    fn is_initialized(&self) -> bool {
+        true
+    }
+
+    fn merge_from(&mut self, is: &mut ::protobuf::CodedInputStream<'_>) -> ::protobuf::ProtobufResult<()> {
+        while !is.eof()? {
+            let (field_number, wire_type) = is.read_tag_unpack()?;
+            match field_number {
+                1 => {
+                    ::protobuf::rt::read_singular_proto3_string_into(wire_type, is, &mut self.txid)?;
+                },
+                2 => {
+                    if wire_type != ::protobuf::wire_format::WireTypeVarint {
+                        return ::std::result::Result::Err(::protobuf::rt::unexpected_wire_type(wire_type));
+                    }
+                    let tmp = is.read_uint32()?;
+                    self.vout = tmp;
+                },
+                3 => {
+                    if wire_type != ::protobuf::wire_format::WireTypeVarint {
+                        return ::std::result::Result::Err(::protobuf::rt::unexpected_wire_type(wire_type));
+                    }
+                    let tmp = is.read_uint64()?;
+                    self.amount = tmp;
+                },
+                _ => {
+                    ::protobuf::rt::read_unknown_or_skip_group(field_number, wire_type, is, self.mut_unknown_fields())?;
+                },
+            };
+        }
+        ::std::result::Result::Ok(())
+    }
+
+    // Compute sizes of nested messages
+    #[allow(unused_variables)]
+    fn compute_size(&self) -> u32 {
+        let mut my_size = 0;
+        if !self.txid.is_empty() {
+            my_size += ::protobuf::rt::string_size(1, &self.txid);
+        }
+        if self.vout != 0 {
+            my_size += ::protobuf::rt::value_size(2, self.vout, ::protobuf::wire_format::WireTypeVarint);
+        }
+        if self.amount != 0 {
+            my_size += ::protobuf::rt::value_size(3, self.amount, ::protobuf::wire_format::WireTypeVarint);
+        }
+        my_size += ::protobuf::rt::unknown_fields_size(self.get_unknown_fields());
+        self.cached_size.set(my_size);
+        my_size
+    }
+
+    fn write_to_with_cached_sizes(&self, os: &mut ::protobuf::CodedOutputStream<'_>) -> ::protobuf::ProtobufResult<()> {
+        if !self.txid.is_empty() {
+            os.write_string(1, &self.txid)?;
+        }
+        if self.vout != 0 {
+            os.write_uint32(2, self.vout)?;
+        }
+        if self.amount != 0 {
+            os.write_uint64(3, self.amount)?;
+        }
+        os.write_unknown_fields(self.get_unknown_fields())?;
+        ::std::result::Result::Ok(())
+    }
+
+    fn get_cached_size(&self) -> u32 {
+        self.cached_size.get()
+    }
+
+    fn get_unknown_fields(&self) -> &::protobuf::UnknownFields {
+        &self.unknown_fields
+    }
+
+    fn mut_unknown_fields(&mut self) -> &mut ::protobuf::UnknownFields {
+        &mut self.unknown_fields
+    }
+
+    fn as_any(&self) -> &dyn (::std::any::Any) {
+        self as &dyn (::std::any::Any)
+    }
+    fn as_any_mut(&mut self) -> &mut dyn (::std::any::Any) {
+        self as &mut dyn (::std::any::Any)
+    }
+    fn into_any(self: ::std::boxed::Box<Self>) -> ::std::boxed::Box<dyn (::std::any::Any)> {
+        self
+    }
+
+    fn descriptor(&self) -> &'static ::protobuf::reflect::MessageDescriptor {
+        Self::descriptor_static()
+    }
+
+    fn new() -> Utxo {
+        Utxo::new()
+    }
+
+    fn descriptor_static() -> &'static ::protobuf::reflect::MessageDescriptor {
+        static descriptor: ::protobuf::rt::LazyV2<::protobuf::reflect::MessageDescriptor> = ::protobuf::rt::LazyV2::INIT;
+        descriptor.get(|| {
+            let mut fields = ::std::vec::Vec::new();
+            fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeString>(
+                "txid",
+                |m: &Utxo| { &m.txid },
+                |m: &mut Utxo| { &mut m.txid },
+            ));
+            fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeUint32>(
+                "vout",
+                |m: &Utxo| { &m.vout },
+                |m: &mut Utxo| { &mut m.vout },
+            ));
+            fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeUint64>(
+                "amount",
+                |m: &Utxo| { &m.amount },
+                |m: &mut Utxo| { &mut m.amount },
+            ));
+            ::protobuf::reflect::MessageDescriptor::new_pb_name::<Utxo>(
+                "Utxo",
+                fields,
+                file_descriptor_proto()
+            )
+        })
+    }
+
+    fn default_instance() -> &'static Utxo {
+        static instance: ::protobuf::rt::LazyV2<Utxo> = ::protobuf::rt::LazyV2::INIT;
+        instance.get(Utxo::new)
+    }
+}
+
+impl ::protobuf::Clear for Utxo {
+    fn clear(&mut self) {
+        self.txid.clear();
+        self.vout = 0;
+        self.amount = 0;
+        self.unknown_fields.clear();
+    }
+}
+
+impl ::std::fmt::Debug for Utxo {
+    fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+        ::protobuf::text_format::fmt(self, f)
+    }
+}
+
+impl ::protobuf::reflect::ProtobufValue for Utxo {
+    fn as_ref(&self) -> ::protobuf::reflect::ReflectValueRef {
+        ::protobuf::reflect::ReflectValueRef::Message(self)
+    }
+}
+
 static file_descriptor_proto_data: &'static [u8] = b"\
-    \n\rbalance.proto\x12\remerald.state\"\x81\x01\n\x07Balance\x12\x18\n\
+    \n\rbalance.proto\x12\remerald.state\"\xaa\x01\n\x07Balance\x12\x18\n\
     \x07address\x18\x01\x20\x01(\tR\x07address\x12\x0e\n\x02ts\x18\x02\x20\
     \x01(\x04R\x02ts\x12\x1e\n\nblockchain\x18\x03\x20\x01(\rR\nblockchain\
     \x12\x14\n\x05asset\x18\x04\x20\x01(\tR\x05asset\x12\x16\n\x06amount\x18\
-    \x05\x20\x01(\tR\x06amount\"C\n\rBalanceBundle\x122\n\x08balances\x18\
-    \x01\x20\x03(\x0b2\x16.emerald.state.BalanceR\x08balancesJ\xa4\x03\n\x06\
-    \x12\x04\0\0\r\x01\n\x08\n\x01\x0c\x12\x03\0\0\x12\n\x08\n\x01\x02\x12\
-    \x03\x01\0\x16\n\n\n\x02\x04\0\x12\x04\x03\0\t\x01\n\n\n\x03\x04\0\x01\
-    \x12\x03\x03\x08\x0f\n\x0b\n\x04\x04\0\x02\0\x12\x03\x04\x02\x15\n\x0c\n\
-    \x05\x04\0\x02\0\x05\x12\x03\x04\x02\x08\n\x0c\n\x05\x04\0\x02\0\x01\x12\
-    \x03\x04\t\x10\n\x0c\n\x05\x04\0\x02\0\x03\x12\x03\x04\x13\x14\n\x0b\n\
-    \x04\x04\0\x02\x01\x12\x03\x05\x02\x10\n\x0c\n\x05\x04\0\x02\x01\x05\x12\
-    \x03\x05\x02\x08\n\x0c\n\x05\x04\0\x02\x01\x01\x12\x03\x05\t\x0b\n\x0c\n\
-    \x05\x04\0\x02\x01\x03\x12\x03\x05\x0e\x0f\n\x0b\n\x04\x04\0\x02\x02\x12\
-    \x03\x06\x02\x18\n\x0c\n\x05\x04\0\x02\x02\x05\x12\x03\x06\x02\x08\n\x0c\
-    \n\x05\x04\0\x02\x02\x01\x12\x03\x06\t\x13\n\x0c\n\x05\x04\0\x02\x02\x03\
-    \x12\x03\x06\x16\x17\n\x0b\n\x04\x04\0\x02\x03\x12\x03\x07\x02\x13\n\x0c\
-    \n\x05\x04\0\x02\x03\x05\x12\x03\x07\x02\x08\n\x0c\n\x05\x04\0\x02\x03\
-    \x01\x12\x03\x07\t\x0e\n\x0c\n\x05\x04\0\x02\x03\x03\x12\x03\x07\x11\x12\
-    \n\x0b\n\x04\x04\0\x02\x04\x12\x03\x08\x02\x14\n\x0c\n\x05\x04\0\x02\x04\
-    \x05\x12\x03\x08\x02\x08\n\x0c\n\x05\x04\0\x02\x04\x01\x12\x03\x08\t\x0f\
-    \n\x0c\n\x05\x04\0\x02\x04\x03\x12\x03\x08\x12\x13\n\n\n\x02\x04\x01\x12\
-    \x04\x0b\0\r\x01\n\n\n\x03\x04\x01\x01\x12\x03\x0b\x08\x15\n\x0b\n\x04\
-    \x04\x01\x02\0\x12\x03\x0c\x02\x20\n\x0c\n\x05\x04\x01\x02\0\x04\x12\x03\
-    \x0c\x02\n\n\x0c\n\x05\x04\x01\x02\0\x06\x12\x03\x0c\x0b\x12\n\x0c\n\x05\
-    \x04\x01\x02\0\x01\x12\x03\x0c\x13\x1b\n\x0c\n\x05\x04\x01\x02\0\x03\x12\
-    \x03\x0c\x1e\x1fb\x06proto3\
+    \x05\x20\x01(\tR\x06amount\x12'\n\x04utxo\x18\x06\x20\x03(\x0b2\x13.emer\
+    ald.state.UtxoR\x04utxo\"C\n\rBalanceBundle\x122\n\x08balances\x18\x01\
+    \x20\x03(\x0b2\x16.emerald.state.BalanceR\x08balances\"F\n\x04Utxo\x12\
+    \x12\n\x04txid\x18\x01\x20\x01(\tR\x04txid\x12\x12\n\x04vout\x18\x02\x20\
+    \x01(\rR\x04vout\x12\x16\n\x06amount\x18\x03\x20\x01(\x04R\x06amountJ\
+    \xf9\x05\n\x06\x12\x04\0\0\x16\x01\n\x08\n\x01\x0c\x12\x03\0\0\x12\n\x08\
+    \n\x01\x02\x12\x03\x01\0\x16\n\n\n\x02\x04\0\x12\x04\x03\0\x0b\x01\n\n\n\
+    \x03\x04\0\x01\x12\x03\x03\x08\x0f\n\x0b\n\x04\x04\0\x02\0\x12\x03\x04\
+    \x02\x15\n\x0c\n\x05\x04\0\x02\0\x05\x12\x03\x04\x02\x08\n\x0c\n\x05\x04\
+    \0\x02\0\x01\x12\x03\x04\t\x10\n\x0c\n\x05\x04\0\x02\0\x03\x12\x03\x04\
+    \x13\x14\n\x0b\n\x04\x04\0\x02\x01\x12\x03\x05\x02\x10\n\x0c\n\x05\x04\0\
+    \x02\x01\x05\x12\x03\x05\x02\x08\n\x0c\n\x05\x04\0\x02\x01\x01\x12\x03\
+    \x05\t\x0b\n\x0c\n\x05\x04\0\x02\x01\x03\x12\x03\x05\x0e\x0f\n\x0b\n\x04\
+    \x04\0\x02\x02\x12\x03\x06\x02\x18\n\x0c\n\x05\x04\0\x02\x02\x05\x12\x03\
+    \x06\x02\x08\n\x0c\n\x05\x04\0\x02\x02\x01\x12\x03\x06\t\x13\n\x0c\n\x05\
+    \x04\0\x02\x02\x03\x12\x03\x06\x16\x17\n\x0b\n\x04\x04\0\x02\x03\x12\x03\
+    \x07\x02\x13\n\x0c\n\x05\x04\0\x02\x03\x05\x12\x03\x07\x02\x08\n\x0c\n\
+    \x05\x04\0\x02\x03\x01\x12\x03\x07\t\x0e\n\x0c\n\x05\x04\0\x02\x03\x03\
+    \x12\x03\x07\x11\x12\n\x0b\n\x04\x04\0\x02\x04\x12\x03\x08\x02\x14\n\x0c\
+    \n\x05\x04\0\x02\x04\x05\x12\x03\x08\x02\x08\n\x0c\n\x05\x04\0\x02\x04\
+    \x01\x12\x03\x08\t\x0f\n\x0c\n\x05\x04\0\x02\x04\x03\x12\x03\x08\x12\x13\
+    \n$\n\x04\x04\0\x02\x05\x12\x03\n\x02\x19\x1a\x17\x20optional\x20utxo\
+    \x20details\n\n\x0c\n\x05\x04\0\x02\x05\x04\x12\x03\n\x02\n\n\x0c\n\x05\
+    \x04\0\x02\x05\x06\x12\x03\n\x0b\x0f\n\x0c\n\x05\x04\0\x02\x05\x01\x12\
+    \x03\n\x10\x14\n\x0c\n\x05\x04\0\x02\x05\x03\x12\x03\n\x17\x18\n\n\n\x02\
+    \x04\x01\x12\x04\r\0\x0f\x01\n\n\n\x03\x04\x01\x01\x12\x03\r\x08\x15\n\
+    \x0b\n\x04\x04\x01\x02\0\x12\x03\x0e\x02\x20\n\x0c\n\x05\x04\x01\x02\0\
+    \x04\x12\x03\x0e\x02\n\n\x0c\n\x05\x04\x01\x02\0\x06\x12\x03\x0e\x0b\x12\
+    \n\x0c\n\x05\x04\x01\x02\0\x01\x12\x03\x0e\x13\x1b\n\x0c\n\x05\x04\x01\
+    \x02\0\x03\x12\x03\x0e\x1e\x1f\n\n\n\x02\x04\x02\x12\x04\x11\0\x16\x01\n\
+    \n\n\x03\x04\x02\x01\x12\x03\x11\x08\x0c\n\x0b\n\x04\x04\x02\x02\0\x12\
+    \x03\x12\x02\x12\n\x0c\n\x05\x04\x02\x02\0\x05\x12\x03\x12\x02\x08\n\x0c\
+    \n\x05\x04\x02\x02\0\x01\x12\x03\x12\t\r\n\x0c\n\x05\x04\x02\x02\0\x03\
+    \x12\x03\x12\x10\x11\n\x0b\n\x04\x04\x02\x02\x01\x12\x03\x13\x02\x12\n\
+    \x0c\n\x05\x04\x02\x02\x01\x05\x12\x03\x13\x02\x08\n\x0c\n\x05\x04\x02\
+    \x02\x01\x01\x12\x03\x13\t\r\n\x0c\n\x05\x04\x02\x02\x01\x03\x12\x03\x13\
+    \x10\x11\nE\n\x04\x04\x02\x02\x02\x12\x03\x15\x02\x14\x1a8\x20we\x20use\
+    \x20it\x20only\x20for\x20bitcoin,\x20so\x2064\x20bit\x20number\x20is\x20\
+    enough\n\n\x0c\n\x05\x04\x02\x02\x02\x05\x12\x03\x15\x02\x08\n\x0c\n\x05\
+    \x04\x02\x02\x02\x01\x12\x03\x15\t\x0f\n\x0c\n\x05\x04\x02\x02\x02\x03\
+    \x12\x03\x15\x12\x13b\x06proto3\
 ";
 
 static file_descriptor_proto_lazy: ::protobuf::rt::LazyV2<::protobuf::descriptor::FileDescriptorProto> = ::protobuf::rt::LazyV2::INIT;

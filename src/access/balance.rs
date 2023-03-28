@@ -2,8 +2,8 @@ use std::str::FromStr;
 use chrono::{DateTime, TimeZone, Utc};
 use num_bigint::BigUint;
 use num_traits::identities::Zero;
-use crate::errors::StateError;
-use crate::proto::balance::{Balance as proto_Balance, BalanceBundle as proto_BalanceBundle};
+use crate::errors::{StateError};
+use crate::proto::balance::{Balance as proto_Balance, BalanceBundle as proto_BalanceBundle, Utxo as proto_Utxo};
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Balance {
@@ -12,6 +12,14 @@ pub struct Balance {
     pub address: String,
     pub blockchain: u32,
     pub asset: String,
+    pub utxo: Vec<Utxo>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct Utxo {
+    pub txid: String,
+    pub vout: u32,
+    pub amount: u64,
 }
 
 impl Default for Balance {
@@ -21,7 +29,31 @@ impl Default for Balance {
             ts: Utc::now(),
             address: "NONE".to_string(),
             blockchain: 0,
-            asset: "NONE".to_string()
+            asset: "NONE".to_string(),
+            utxo: vec![]
+        }
+    }
+}
+
+impl Balance {
+
+    ///
+    /// Make sure that the balance object is consistent.
+    /// If it contains Utxo the sum of Utxo must equal the total amount.
+    /// If it finds a utxo inconsitency it returns the balance w/o utxo
+    fn validated(self) -> Balance {
+        if self.utxo.is_empty() {
+            self
+        } else {
+            let total: u64 = self.utxo.iter().map(|u| u.amount).sum();
+            if BigUint::from(total) == self.amount {
+                self
+            } else {
+                Balance {
+                    utxo: vec![],
+                    ..self
+                }
+            }
         }
     }
 }
@@ -66,7 +98,8 @@ impl TryFrom<&proto_Balance> for Balance {
             address: value.address.clone(),
             blockchain: value.blockchain,
             asset: value.asset.clone(),
-        })
+            utxo: value.utxo.to_vec().iter().map(|p| p.into()).collect()
+        }.validated())
     }
 }
 
@@ -79,6 +112,7 @@ impl Into<proto_Balance> for Balance {
         proto.set_address(self.address);
         proto.set_blockchain(self.blockchain);
         proto.set_asset(self.asset);
+        proto.set_utxo(self.utxo.iter().map(|u| u.clone().into()).collect());
 
         proto
     }
@@ -107,3 +141,23 @@ impl Into<proto_BalanceBundle> for Vec<Balance> {
     }
 }
 
+impl From<&proto_Utxo> for Utxo {
+
+    fn from(value: &proto_Utxo) -> Self {
+        Utxo {
+            amount: value.get_amount(),
+            txid: value.get_txid().to_string(),
+            vout: value.get_vout()
+        }
+    }
+}
+
+impl Into<proto_Utxo> for Utxo {
+    fn into(self) -> proto_Utxo {
+        let mut proto = proto_Utxo::new();
+        proto.set_txid(self.txid);
+        proto.set_amount(self.amount);
+        proto.set_vout(self.vout);
+        proto
+    }
+}
