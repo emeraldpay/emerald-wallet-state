@@ -86,11 +86,49 @@ pub trait QueryRanges {
 pub struct  IndexConvert {
 }
 
+#[allow(dead_code)]
 impl IndexConvert {
     /// Descending timestamp, because most of the UI supposed to show data from now backward it time
     pub fn get_desc_timestamp(ts: u64) -> String {
         // 1_647_313_850_992 - 13 characters
         format!("D{:#013}", 9_999_999_999_999 - ts)
+    }
+
+    pub fn get_asc_number(v: u64) -> String {
+        // 20 characters
+        format!("A{:#020}", v)
+    }
+
+    pub fn get_desc_number(v: u64) -> String {
+        // 20 characters (2^64 == 18_446_744_073_709_551_616)
+        format!("A{:#020}", u64::MAX - v)
+    }
+
+    /// Index when FALSE should go before TRUE
+    pub fn get_bool_ft(v: &bool) -> String {
+        if *v {"F1".to_string()} else {"F0".to_string()}
+    }
+
+    /// Index when TRUE should go before FALSE
+    pub fn get_bool_tf(v: &bool) -> String {
+        if *v {"T0".to_string()} else {"T1".to_string()}
+    }
+
+    ///
+    /// To index a tx id in ASC order by taking only first 64 bit of the value.
+    /// The id is threaten as a hex value with an optional `0x` prefix.
+    pub fn txid_as_pos(tx_id: String) -> u64 {
+        hex::decode(tx_id.trim_start_matches("0x"))
+            .map(|txid| {
+                let bytes: [u8; 8] = if txid.len() >= 8 {
+                    txid.as_slice()[0..8].try_into().unwrap()
+                } else {
+                    let mut buf = [0u8; 8];
+                    buf[(8-txid.len())..8].clone_from_slice(txid.as_slice());
+                    buf
+                };
+                u64::from_be_bytes(bytes)
+            }).ok().unwrap_or(0)
     }
 
     pub fn from_encodable<T>(keys: Vec<T>) -> Vec<String>
@@ -108,7 +146,7 @@ impl IndexConvert {
 
 #[cfg(test)]
 mod tests {
-
+    use std::cmp::Ordering;
     use super::IndexConvert;
 
     #[test]
@@ -121,5 +159,79 @@ mod tests {
     fn format_zero_ts() {
         let act = IndexConvert::get_desc_timestamp(0);
         assert_eq!(act, "D9999999999999");
+    }
+
+    #[test]
+    fn order_ts_desc() {
+        assert_eq!(IndexConvert::get_desc_timestamp(0).cmp(&IndexConvert::get_desc_timestamp(1000)), Ordering::Greater);
+    }
+
+    #[test]
+    fn format_number_desc() {
+        assert_eq!(IndexConvert::get_desc_number(1_647_313_850_992), "A18446742426395700623");
+        assert_eq!(IndexConvert::get_desc_number(0),                 "A18446744073709551615");
+        assert_eq!(IndexConvert::get_desc_number(u64::MAX),          "A00000000000000000000");
+    }
+
+    #[test]
+    fn order_number_desc() {
+        // DESC -> big numbers come small
+        assert_eq!(IndexConvert::get_desc_number(1000).cmp(&IndexConvert::get_desc_number(500)),     Ordering::Less);
+        assert_eq!(IndexConvert::get_desc_number(1000).cmp(&IndexConvert::get_desc_number(999)),     Ordering::Less);
+        assert_eq!(IndexConvert::get_desc_number(1000).cmp(&IndexConvert::get_desc_number(1001)),    Ordering::Greater);
+        assert_eq!(IndexConvert::get_desc_number(1000).cmp(&IndexConvert::get_desc_number(0)),       Ordering::Less);
+        assert_eq!(IndexConvert::get_desc_number(1000).cmp(&IndexConvert::get_desc_number(10_000)),  Ordering::Greater);
+    }
+
+    #[test]
+    fn format_bool_tf() {
+        assert_eq!(IndexConvert::get_bool_tf(&true),  "T0");
+        assert_eq!(IndexConvert::get_bool_tf(&false), "T1");
+    }
+
+    #[test]
+    fn format_bool_ft() {
+        assert_eq!(IndexConvert::get_bool_ft(&true),  "F1");
+        assert_eq!(IndexConvert::get_bool_ft(&false), "F0");
+    }
+
+    #[test]
+    fn order_bool_tf() {
+        // TRUE comes before FALSE
+        assert_eq!(IndexConvert::get_bool_tf(&true).cmp(&IndexConvert::get_bool_tf(&false)),     Ordering::Less);
+        assert_eq!(IndexConvert::get_bool_tf(&false).cmp(&IndexConvert::get_bool_tf(&true)),     Ordering::Greater);
+        assert_eq!(IndexConvert::get_bool_tf(&false).cmp(&IndexConvert::get_bool_tf(&false)),     Ordering::Equal);
+        assert_eq!(IndexConvert::get_bool_tf(&true).cmp(&IndexConvert::get_bool_tf(&true)),     Ordering::Equal);
+    }
+
+    #[test]
+    fn order_bool_ft() {
+        // FALSE comes before TRUE
+        assert_eq!(IndexConvert::get_bool_ft(&true).cmp(&IndexConvert::get_bool_ft(&false)),     Ordering::Greater);
+        assert_eq!(IndexConvert::get_bool_ft(&false).cmp(&IndexConvert::get_bool_ft(&true)),     Ordering::Less);
+        assert_eq!(IndexConvert::get_bool_ft(&false).cmp(&IndexConvert::get_bool_ft(&false)),     Ordering::Equal);
+        assert_eq!(IndexConvert::get_bool_ft(&true).cmp(&IndexConvert::get_bool_ft(&true)),     Ordering::Equal);
+    }
+
+    #[test]
+    fn format_short_tx_id() {
+        assert_eq!(IndexConvert::txid_as_pos("".to_string()), 0x0);
+        assert_eq!(IndexConvert::txid_as_pos("000".to_string()), 0x0);
+        assert_eq!(IndexConvert::txid_as_pos("ff".to_string()), 0xff);
+    }
+
+    #[test]
+    fn format_invalid_tx_id() {
+        assert_eq!(IndexConvert::txid_as_pos("NONE".to_string()), 0x0);
+    }
+
+    #[test]
+    fn format_ethereum_tx() {
+        assert_eq!(IndexConvert::txid_as_pos("0x275a4b69b11068633e5729427d1da63368c2a6ed6fbaafde522f1e1eb10e2d49".to_string()), 0x275a4b69b1106863);
+    }
+
+    #[test]
+    fn format_bitcoin_tx() {
+        assert_eq!(IndexConvert::txid_as_pos("8f76ace471e8553eef24f10f6286838a2271e5505bb934a2af8cd37aae3a3eb1".to_string()), 0x8f76ace471e8553e);
     }
 }

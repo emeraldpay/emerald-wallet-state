@@ -9,7 +9,7 @@ use uuid::Uuid;
 use crate::access::transactions::{Filter, RemoteCursor, Transactions};
 use crate::access::pagination::{PageResult, PageQuery, Cursor};
 use crate::errors::{StateError,InvalidValueError};
-use crate::proto::transactions::{Transaction as proto_Transaction, Cursor as proto_Cursor, TransactionMeta as proto_TransactionMeta};
+use crate::proto::transactions::{Transaction as proto_Transaction, Cursor as proto_Cursor, TransactionMeta as proto_TransactionMeta, State};
 use crate::storage::indexing::{IndexedValue, QueryRanges, IndexConvert, IndexEncoding, Indexing};
 
 ///
@@ -22,6 +22,7 @@ use crate::storage::indexing::{IndexedValue, QueryRanges, IndexConvert, IndexEnc
 ///
 /// - `1/<TIMESTAMP>`
 /// - `2/<WALLET_ID>/<TIMESTAMP>`
+/// - `3/<WALLET_ID>/<IS_RECENT>/<TIMESTAMP>/<POS>/<TXHASH>`
 ///
 ///
 
@@ -31,6 +32,8 @@ const PREFIX_IDX: &'static str = "idx:tx";
 const PREFIX_CURSOR: &'static str = "addr_cursor";
 
 enum IndexType {
+    // `<WALLET_ID>/<IS_RECENT>/<TIMESTAMP>/<POS>/<TXHASH>`
+    ByWalletAndConfirm(Uuid, bool, u64, u64, String),
     // `<WALLET_ID>/<TIMESTAMP>`
     ByWallet(Uuid, u64),
     // `/<TIMESTAMP>`
@@ -42,6 +45,7 @@ impl IndexType {
         match self {
             IndexType::Everything(_) => 1,
             IndexType::ByWallet(_, _) => 2,
+            IndexType::ByWalletAndConfirm(_, _, _, _, _) => 3,
         }
     }
 }
@@ -49,8 +53,24 @@ impl IndexType {
 impl IndexEncoding for IndexType {
     fn get_index_key(&self) -> String {
         match self {
-            IndexType::ByWallet(wallet_id, ts) => format!("{}:{:}/{:}/{:}", PREFIX_IDX, self.get_prefix(), wallet_id, IndexConvert::get_desc_timestamp(*ts)),
-            IndexType::Everything(ts) => format!("{}:{:}/{:}", PREFIX_IDX, self.get_prefix(), IndexConvert::get_desc_timestamp(*ts))
+            IndexType::ByWalletAndConfirm(wallet_id, recent, ts, pos, tx_id) => {
+                format!("{}:{:}/{:}/{:}/{:}/{:}/{:}", PREFIX_IDX, self.get_prefix(),
+                        wallet_id,
+                        IndexConvert::get_bool_tf(recent),
+                        IndexConvert::get_desc_timestamp(*ts),
+                        IndexConvert::get_desc_number(*pos),
+                        IndexConvert::get_asc_number(IndexConvert::txid_as_pos(tx_id.clone()))
+                )
+            },
+            IndexType::ByWallet(wallet_id, ts) => {
+                format!("{}:{:}/{:}/{:}", PREFIX_IDX, self.get_prefix(),
+                        wallet_id,
+                        IndexConvert::get_desc_timestamp(*ts))
+            },
+            IndexType::Everything(ts) => {
+                format!("{}:{:}/{:}", PREFIX_IDX, self.get_prefix(),
+                        IndexConvert::get_desc_timestamp(*ts))
+            }
         }
     }
 }
@@ -60,24 +80,30 @@ impl IndexedValue<IndexType> for proto_Transaction {
     fn get_index(&self) -> Vec<IndexType> {
         let mut keys: Vec<IndexType> = Vec::new();
 
-        let timestamps: Vec<u64> = vec![
-            self.since_timestamp,
-            self.confirm_timestamp,
-        ]
-            .iter()
-            .filter(|ts| **ts > 0u64)
-            .map(|ts| *ts)
-            .collect();
+        let timestamp = if self.confirm_timestamp > 0 {
+            self.confirm_timestamp
+        } else {
+            self.since_timestamp
+        };
 
-        for ts in &timestamps {
-            keys.push(IndexType::Everything(*ts))
-        }
+
+        keys.push(IndexType::Everything(timestamp));
+
+        let recent = self.state == State::SUBMITTED || self.state == State::PREPARED;
 
         for change in self.get_changes() {
             if let Ok(wallet_id) = Uuid::from_str(change.get_wallet_id()) {
-                for ts in &timestamps {
-                    keys.push(IndexType::ByWallet(wallet_id, *ts));
-                }
+                keys.push(IndexType::ByWallet(wallet_id, timestamp));
+                let pos = if recent {
+                    IndexConvert::txid_as_pos(self.tx_id.clone())
+                } else {
+                    if self.block.is_some() {
+                        self.block_pos.into()
+                    } else {
+                        999999
+                    }
+                };
+                keys.push(IndexType::ByWalletAndConfirm(wallet_id.clone(), recent, timestamp, pos, self.tx_id.clone()));
             }
         }
 
@@ -88,10 +114,17 @@ impl IndexedValue<IndexType> for proto_Transaction {
 
 impl QueryRanges for Filter {
     fn get_index_bounds(&self) -> (Bound<String>, Bound<String>) {
-        // TODO use wallet index if a wallet specified in filter
-        let now = IndexType::Everything(Utc::now().naive_utc().timestamp_millis() as u64)
-            .get_index_key();
-        let start = IndexType::Everything(0u64).get_index_key();
+        let ts_now = Utc::now().naive_utc().timestamp_millis() as u64;
+        let ts_start = 0u64;
+
+        if let Some(wallet) = &self.wallet {
+            let now = IndexType::ByWalletAndConfirm(wallet.get_wallet_id(), true, ts_now, u64::MAX, "0000000000000000".to_string()).get_index_key();
+            let start = IndexType::ByWalletAndConfirm(wallet.get_wallet_id(), false, ts_start, 0u64, "ffffffffffffffff".to_string()).get_index_key();
+            return (Bound::Included(now), Bound::Included(start))
+        }
+
+        let now = IndexType::Everything(ts_now).get_index_key();
+        let start = IndexType::Everything(ts_start).get_index_key();
         (Bound::Included(now), Bound::Included(start))
     }
 }
@@ -320,7 +353,7 @@ mod tests {
     use crate::access::transactions::{AddressRef, Filter, Transactions, WalletRef};
     use crate::access::pagination::PageQuery;
     use crate::storage::transaction_store::{IndexType, IndexedValue};
-    use crate::proto::transactions::{BlockchainId, Transaction as proto_Transaction, Change as proto_Change, TransactionMeta as proto_TransactionMeta, Direction, Change_ChangeType};
+    use crate::proto::transactions::{BlockchainId, Transaction as proto_Transaction, Change as proto_Change, TransactionMeta as proto_TransactionMeta, Direction, Change_ChangeType, State};
     use crate::storage::indexing::IndexEncoding;
     use crate::storage::sled_access::SledStorage;
 
@@ -341,6 +374,7 @@ mod tests {
         let mut tx = proto_Transaction::new();
         tx.blockchain = BlockchainId::CHAIN_ETHEREUM;
         tx.since_timestamp = 1_647_313_850_992;
+        tx.state = State::SUBMITTED;
         let mut change1 = proto_Change::new();
         change1.wallet_id = "72279ede-44c4-4951-925b-f51a7b9e929a".to_string();
         change1.entry_id = 0;
@@ -348,9 +382,10 @@ mod tests {
         tx.changes.push(change1);
 
         let indexes: Vec<String> = tx.get_index_keys();
-        assert_eq!(indexes.len(), 2);
+        assert_eq!(indexes.len(), 3);
         assert_eq!("idx:tx:1/D8352686149007", indexes.get(0).unwrap());
         assert_eq!("idx:tx:2/72279ede-44c4-4951-925b-f51a7b9e929a/D8352686149007", indexes.get(1).unwrap());
+        assert_eq!("idx:tx:3/72279ede-44c4-4951-925b-f51a7b9e929a/T0/D8352686149007/A18446744073709551615/A00000000000000000000", indexes.get(2).unwrap());
     }
 
     #[test]
@@ -713,5 +748,79 @@ mod tests {
             .unwrap().unwrap();
 
         assert_eq!(act.label, "test 1");
+    }
+
+    #[test]
+    fn query_order_by_confirmation_and_timestamp() {
+        let tmp_dir = TempDir::new("create_and_find_tx").unwrap();
+        let access = SledStorage::open(tmp_dir.path().to_path_buf()).unwrap();
+        let transactions = access.get_transactions();
+
+        let wallet_id = Uuid::new_v4();
+
+        let tx1 = {
+            let mut tx = proto_Transaction::new();
+            tx.blockchain = BlockchainId::CHAIN_ETHEREUM;
+            tx.tx_id = "0x11111cef7bd1e81b453e5d0caf4fb6d1922f761cbf069962cf3a82ab0624360d".to_string();
+            tx.since_timestamp = 1_647_313_000_000;
+            tx.state = State::SUBMITTED;
+            tx.clear_confirm_timestamp();
+
+            let mut change = proto_Change::new();
+            change.wallet_id = wallet_id.to_string();
+            change.entry_id = 0;
+            change.address = "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48".to_string();
+            tx.changes.push(change);
+
+            tx
+        };
+
+        let tx2 = {
+            let mut tx = proto_Transaction::new();
+            tx.blockchain = BlockchainId::CHAIN_ETHEREUM;
+            tx.tx_id = "0x2222f761cbf069962cf3a82ab0624360dd9b11cef7bd1e81b453e5d0caf4fb6d".to_string();
+            tx.since_timestamp = 1_647_313_001_111;
+            tx.state = State::CONFIRMED;
+            tx.confirm_timestamp = 1_647_313_002_222;
+
+            let mut change = proto_Change::new();
+            change.wallet_id = wallet_id.to_string();
+            change.entry_id = 0;
+            change.address = "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48".to_string();
+            tx.changes.push(change);
+
+            tx
+        };
+
+        let tx3 = {
+            let mut tx = proto_Transaction::new();
+            tx.blockchain = BlockchainId::CHAIN_ETHEREUM;
+            tx.tx_id = "0x333f3a82ab0624360d1922f761d9b11cef7bd1e81b453e5d0caf4fbcbf06996d".to_string();
+            tx.since_timestamp = 1_647_313_003_333;
+            tx.state = State::SUBMITTED;
+            tx.clear_confirm_timestamp();
+
+            let mut change = proto_Change::new();
+            change.wallet_id = wallet_id.to_string();
+            change.entry_id = 0;
+            change.address = "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48".to_string();
+            tx.changes.push(change);
+
+            tx
+        };
+
+        transactions.submit(vec![tx1.clone(), tx2.clone(), tx3.clone()]).expect("not saved");
+
+        let wallet_filter = Filter {
+            wallet: Some(WalletRef::WholeWallet(wallet_id)),
+            ..Filter::default()
+        };
+        let results = transactions.query(wallet_filter, PageQuery::default()).expect("query data");
+        assert_eq!(results.values.len(), 3);
+
+        assert_eq!(results.values.get(0).unwrap().tx_id, tx3.tx_id);
+        assert_eq!(results.values.get(1).unwrap().tx_id, tx1.tx_id);
+        assert_eq!(results.values.get(2).unwrap().tx_id, tx2.tx_id);
+        assert!(results.cursor.is_none());
     }
 }

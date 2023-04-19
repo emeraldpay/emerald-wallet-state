@@ -14,6 +14,15 @@ pub enum WalletRef {
     SelectedEntry(Uuid, u32),
 }
 
+impl WalletRef {
+    pub fn get_wallet_id(&self) -> Uuid {
+        match self {
+            WalletRef::WholeWallet(id) => id.clone(),
+            WalletRef::SelectedEntry(id, _) => id.clone(),
+        }
+    }
+}
+
 #[derive(Debug, Clone)]
 /// Reference to an address
 pub enum AddressRef {
