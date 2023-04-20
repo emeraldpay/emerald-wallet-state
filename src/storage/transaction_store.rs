@@ -385,7 +385,7 @@ mod tests {
         assert_eq!(indexes.len(), 3);
         assert_eq!("idx:tx:1/D8352686149007", indexes.get(0).unwrap());
         assert_eq!("idx:tx:2/72279ede-44c4-4951-925b-f51a7b9e929a/D8352686149007", indexes.get(1).unwrap());
-        assert_eq!("idx:tx:3/72279ede-44c4-4951-925b-f51a7b9e929a/T0/D8352686149007/A18446744073709551615/A00000000000000000000", indexes.get(2).unwrap());
+        assert_eq!("idx:tx:3/72279ede-44c4-4951-925b-f51a7b9e929a/T0/D8352686149007/D18446744073709551615/A00000000000000000000", indexes.get(2).unwrap());
     }
 
     #[test]

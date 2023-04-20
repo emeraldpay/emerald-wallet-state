@@ -101,7 +101,7 @@ impl IndexConvert {
 
     pub fn get_desc_number(v: u64) -> String {
         // 20 characters (2^64 == 18_446_744_073_709_551_616)
-        format!("A{:#020}", u64::MAX - v)
+        format!("D{:#020}", u64::MAX - v)
     }
 
     /// Index when FALSE should go before TRUE
@@ -168,19 +168,38 @@ mod tests {
 
     #[test]
     fn format_number_desc() {
-        assert_eq!(IndexConvert::get_desc_number(1_647_313_850_992), "A18446742426395700623");
-        assert_eq!(IndexConvert::get_desc_number(0),                 "A18446744073709551615");
-        assert_eq!(IndexConvert::get_desc_number(u64::MAX),          "A00000000000000000000");
+        assert_eq!(IndexConvert::get_desc_number(1_647_313_850_992), "D18446742426395700623");
+        assert_eq!(IndexConvert::get_desc_number(0),                 "D18446744073709551615");
+        assert_eq!(IndexConvert::get_desc_number(u64::MAX),          "D00000000000000000000");
+    }
+
+    #[test]
+    fn format_number_asc() {
+        assert_eq!(IndexConvert::get_asc_number(1_647_313_850_992), "A00000001647313850992");
+        assert_eq!(IndexConvert::get_asc_number(0),                 "A00000000000000000000");
+        assert_eq!(IndexConvert::get_asc_number(u64::MAX),          "A18446744073709551615");
     }
 
     #[test]
     fn order_number_desc() {
-        // DESC -> big numbers come small
+        // DESC -> big numbers come before small
         assert_eq!(IndexConvert::get_desc_number(1000).cmp(&IndexConvert::get_desc_number(500)),     Ordering::Less);
         assert_eq!(IndexConvert::get_desc_number(1000).cmp(&IndexConvert::get_desc_number(999)),     Ordering::Less);
         assert_eq!(IndexConvert::get_desc_number(1000).cmp(&IndexConvert::get_desc_number(1001)),    Ordering::Greater);
         assert_eq!(IndexConvert::get_desc_number(1000).cmp(&IndexConvert::get_desc_number(0)),       Ordering::Less);
         assert_eq!(IndexConvert::get_desc_number(1000).cmp(&IndexConvert::get_desc_number(10_000)),  Ordering::Greater);
+        assert_eq!(IndexConvert::get_desc_number(10_000).cmp(&IndexConvert::get_desc_number(10_000)),Ordering::Equal);
+    }
+
+    #[test]
+    fn order_number_asc() {
+        // ASC -> big numbers come after small
+        assert_eq!(IndexConvert::get_asc_number(1000).cmp(&IndexConvert::get_asc_number(500)),     Ordering::Greater);
+        assert_eq!(IndexConvert::get_asc_number(1000).cmp(&IndexConvert::get_asc_number(999)),     Ordering::Greater);
+        assert_eq!(IndexConvert::get_asc_number(1000).cmp(&IndexConvert::get_asc_number(1001)),    Ordering::Less);
+        assert_eq!(IndexConvert::get_asc_number(1000).cmp(&IndexConvert::get_asc_number(0)),       Ordering::Greater);
+        assert_eq!(IndexConvert::get_asc_number(1000).cmp(&IndexConvert::get_asc_number(10_000)),  Ordering::Less);
+        assert_eq!(IndexConvert::get_asc_number(10_000).cmp(&IndexConvert::get_asc_number(10_000)),Ordering::Equal);
     }
 
     #[test]
