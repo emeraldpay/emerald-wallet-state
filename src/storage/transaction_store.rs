@@ -703,6 +703,26 @@ mod tests {
     }
 
     #[test]
+    fn set_and_get_tx_meta_with_raw() {
+        let tmp_dir = TempDir::new("tx").unwrap();
+        let access = SledStorage::open(tmp_dir.path().to_path_buf()).unwrap();
+        let transactions = access.get_transactions();
+
+        let mut meta = proto_TransactionMeta::new();
+        meta.blockchain = BlockchainId::CHAIN_ETHEREUM;
+        meta.tx_id = "0x2f761cbf069962cf3a82ab0d9b11c453e5d0caf4fb6d192624360def7bd1e81b".to_string();
+        meta.timestamp = 1_647_313_850_992;
+        meta.raw = hex::decode("af4fb6d192624360def7b0d72b1014cb9799de95781ce61b9b11c453e5d0c7c1eec752021ebcb344da0a88cdf49e97854d4fa861cbf069962cf3a82abd1e82f7").unwrap();
+        transactions.set_tx_meta(meta.clone()).unwrap();
+
+        let act = transactions.get_tx_meta(100, "0x2f761cbf069962cf3a82ab0d9b11c453e5d0caf4fb6d192624360def7bd1e81b");
+
+        assert!(act.is_ok());
+        let act = act.unwrap().unwrap();
+        assert_eq!(act.raw, hex::decode("af4fb6d192624360def7b0d72b1014cb9799de95781ce61b9b11c453e5d0c7c1eec752021ebcb344da0a88cdf49e97854d4fa861cbf069962cf3a82abd1e82f7").unwrap());
+    }
+
+    #[test]
     fn update_tx_meta_to_latest() {
         let tmp_dir = TempDir::new("tx").unwrap();
         let access = SledStorage::open(tmp_dir.path().to_path_buf()).unwrap();

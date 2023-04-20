@@ -20,6 +20,7 @@ message TransactionMeta {
   BlockchainId blockchain = 2;
   string tx_id = 3;
   string label = 4;
+  bytes raw = 5;
 }
 
 message BlockRef {
