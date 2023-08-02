@@ -3,6 +3,7 @@ use std::sync::Arc;
 use sled::{Db};
 use crate::errors::StateError;
 use crate::storage::adressbook_store::AddressBookAccess;
+use crate::storage::allowance_store::AllowanceAccess;
 use crate::storage::balance_store::BalanceAccess;
 use crate::storage::cache_store::CacheAccess;
 use crate::storage::default_path;
@@ -52,5 +53,11 @@ impl SledStorage {
     /// Generic persistent cache
     pub fn get_cache(&self) -> CacheAccess {
         return CacheAccess { db: self.db.clone() }
+    }
+
+    ///
+    /// ERC20 Allowance Cache
+    pub fn get_allowance(&self) -> AllowanceAccess {
+        return AllowanceAccess { db: self.db.clone() }
     }
 }

@@ -2,8 +2,9 @@ use std::sync::Arc;
 use protobuf::Message;
 use sled::{Db, IVec};
 use crate::access::balance::{Balance, Balances, concat};
-use crate::errors::{InvalidValueError, StateError};
+use crate::errors::{StateError};
 use crate::proto::balance::{BalanceBundle as proto_BalanceBundle};
+use crate::{validate};
 
 const PREFIX_KEY: &'static str = "balance:";
 
@@ -14,14 +15,6 @@ pub struct BalanceAccess {
 impl BalanceAccess {
     fn get_key(addr: &String) -> String {
         format!("{}{}", PREFIX_KEY, addr.to_string())
-    }
-
-    fn validate_address(address: &String) -> Result<(), StateError> {
-        if !address.is_ascii() {
-            return Err(StateError::InvalidValue(
-                InvalidValueError::NameMessage("address".to_string(), "non-ascii".to_string())))
-        }
-        Ok(())
     }
 
     fn convert_stored(base: IVec) -> Vec<Balance> {
@@ -37,7 +30,7 @@ impl BalanceAccess {
 impl Balances for BalanceAccess {
 
     fn set(&self, value: Balance) -> Result<(), StateError> {
-        BalanceAccess::validate_address(&value.address)?;
+        validate::check_address(&value.address)?;
 
         let key = BalanceAccess::get_key(&value.address);
         let value = if let Some(base) = self.db.get(&key)? {
@@ -54,7 +47,7 @@ impl Balances for BalanceAccess {
     }
 
     fn list(&self, address: String) -> Result<Vec<Balance>, StateError> {
-        BalanceAccess::validate_address(&address)?;
+        validate::check_address(&address)?;
 
         let key = BalanceAccess::get_key(&address);
         let value = if let Some(base) = self.db.get(&key)? {
@@ -66,7 +59,7 @@ impl Balances for BalanceAccess {
     }
 
     fn clear(&self, address: String) -> Result<(), StateError> {
-        BalanceAccess::validate_address(&address)?;
+        validate::check_address(&address)?;
 
         let key = BalanceAccess::get_key(&address);
         self.db.remove(key.as_bytes())?;

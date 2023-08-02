@@ -780,6 +780,438 @@ impl ::protobuf::reflect::ProtobufValue for Utxo {
     }
 }
 
+#[derive(PartialEq,Clone,Default)]
+pub struct Allowance {
+    // message fields
+    pub ts: u64,
+    pub ttl: u64,
+    pub wallet_id: ::std::string::String,
+    pub blockchain: u32,
+    pub token: ::std::string::String,
+    pub owner: ::std::string::String,
+    pub spender: ::std::string::String,
+    pub amount: ::std::string::String,
+    // special fields
+    pub unknown_fields: ::protobuf::UnknownFields,
+    pub cached_size: ::protobuf::CachedSize,
+}
+
+impl<'a> ::std::default::Default for &'a Allowance {
+    fn default() -> &'a Allowance {
+        <Allowance as ::protobuf::Message>::default_instance()
+    }
+}
+
+impl Allowance {
+    pub fn new() -> Allowance {
+        ::std::default::Default::default()
+    }
+
+    // uint64 ts = 1;
+
+
+    pub fn get_ts(&self) -> u64 {
+        self.ts
+    }
+    pub fn clear_ts(&mut self) {
+        self.ts = 0;
+    }
+
+    // Param is passed by value, moved
+    pub fn set_ts(&mut self, v: u64) {
+        self.ts = v;
+    }
+
+    // uint64 ttl = 2;
+
+
+    pub fn get_ttl(&self) -> u64 {
+        self.ttl
+    }
+    pub fn clear_ttl(&mut self) {
+        self.ttl = 0;
+    }
+
+    // Param is passed by value, moved
+    pub fn set_ttl(&mut self, v: u64) {
+        self.ttl = v;
+    }
+
+    // string wallet_id = 3;
+
+
+    pub fn get_wallet_id(&self) -> &str {
+        &self.wallet_id
+    }
+    pub fn clear_wallet_id(&mut self) {
+        self.wallet_id.clear();
+    }
+
+    // Param is passed by value, moved
+    pub fn set_wallet_id(&mut self, v: ::std::string::String) {
+        self.wallet_id = v;
+    }
+
+    // Mutable pointer to the field.
+    // If field is not initialized, it is initialized with default value first.
+    pub fn mut_wallet_id(&mut self) -> &mut ::std::string::String {
+        &mut self.wallet_id
+    }
+
+    // Take field
+    pub fn take_wallet_id(&mut self) -> ::std::string::String {
+        ::std::mem::replace(&mut self.wallet_id, ::std::string::String::new())
+    }
+
+    // uint32 blockchain = 4;
+
+
+    pub fn get_blockchain(&self) -> u32 {
+        self.blockchain
+    }
+    pub fn clear_blockchain(&mut self) {
+        self.blockchain = 0;
+    }
+
+    // Param is passed by value, moved
+    pub fn set_blockchain(&mut self, v: u32) {
+        self.blockchain = v;
+    }
+
+    // string token = 5;
+
+
+    pub fn get_token(&self) -> &str {
+        &self.token
+    }
+    pub fn clear_token(&mut self) {
+        self.token.clear();
+    }
+
+    // Param is passed by value, moved
+    pub fn set_token(&mut self, v: ::std::string::String) {
+        self.token = v;
+    }
+
+    // Mutable pointer to the field.
+    // If field is not initialized, it is initialized with default value first.
+    pub fn mut_token(&mut self) -> &mut ::std::string::String {
+        &mut self.token
+    }
+
+    // Take field
+    pub fn take_token(&mut self) -> ::std::string::String {
+        ::std::mem::replace(&mut self.token, ::std::string::String::new())
+    }
+
+    // string owner = 6;
+
+
+    pub fn get_owner(&self) -> &str {
+        &self.owner
+    }
+    pub fn clear_owner(&mut self) {
+        self.owner.clear();
+    }
+
+    // Param is passed by value, moved
+    pub fn set_owner(&mut self, v: ::std::string::String) {
+        self.owner = v;
+    }
+
+    // Mutable pointer to the field.
+    // If field is not initialized, it is initialized with default value first.
+    pub fn mut_owner(&mut self) -> &mut ::std::string::String {
+        &mut self.owner
+    }
+
+    // Take field
+    pub fn take_owner(&mut self) -> ::std::string::String {
+        ::std::mem::replace(&mut self.owner, ::std::string::String::new())
+    }
+
+    // string spender = 7;
+
+
+    pub fn get_spender(&self) -> &str {
+        &self.spender
+    }
+    pub fn clear_spender(&mut self) {
+        self.spender.clear();
+    }
+
+    // Param is passed by value, moved
+    pub fn set_spender(&mut self, v: ::std::string::String) {
+        self.spender = v;
+    }
+
+    // Mutable pointer to the field.
+    // If field is not initialized, it is initialized with default value first.
+    pub fn mut_spender(&mut self) -> &mut ::std::string::String {
+        &mut self.spender
+    }
+
+    // Take field
+    pub fn take_spender(&mut self) -> ::std::string::String {
+        ::std::mem::replace(&mut self.spender, ::std::string::String::new())
+    }
+
+    // string amount = 8;
+
+
+    pub fn get_amount(&self) -> &str {
+        &self.amount
+    }
+    pub fn clear_amount(&mut self) {
+        self.amount.clear();
+    }
+
+    // Param is passed by value, moved
+    pub fn set_amount(&mut self, v: ::std::string::String) {
+        self.amount = v;
+    }
+
+    // Mutable pointer to the field.
+    // If field is not initialized, it is initialized with default value first.
+    pub fn mut_amount(&mut self) -> &mut ::std::string::String {
+        &mut self.amount
+    }
+
+    // Take field
+    pub fn take_amount(&mut self) -> ::std::string::String {
+        ::std::mem::replace(&mut self.amount, ::std::string::String::new())
+    }
+}
+
+impl ::protobuf::Message for Allowance {
+    fn is_initialized(&self) -> bool {
+        true
+    }
+
+    fn merge_from(&mut self, is: &mut ::protobuf::CodedInputStream<'_>) -> ::protobuf::ProtobufResult<()> {
+        while !is.eof()? {
+            let (field_number, wire_type) = is.read_tag_unpack()?;
+            match field_number {
+                1 => {
+                    if wire_type != ::protobuf::wire_format::WireTypeVarint {
+                        return ::std::result::Result::Err(::protobuf::rt::unexpected_wire_type(wire_type));
+                    }
+                    let tmp = is.read_uint64()?;
+                    self.ts = tmp;
+                },
+                2 => {
+                    if wire_type != ::protobuf::wire_format::WireTypeVarint {
+                        return ::std::result::Result::Err(::protobuf::rt::unexpected_wire_type(wire_type));
+                    }
+                    let tmp = is.read_uint64()?;
+                    self.ttl = tmp;
+                },
+                3 => {
+                    ::protobuf::rt::read_singular_proto3_string_into(wire_type, is, &mut self.wallet_id)?;
+                },
+                4 => {
+                    if wire_type != ::protobuf::wire_format::WireTypeVarint {
+                        return ::std::result::Result::Err(::protobuf::rt::unexpected_wire_type(wire_type));
+                    }
+                    let tmp = is.read_uint32()?;
+                    self.blockchain = tmp;
+                },
+                5 => {
+                    ::protobuf::rt::read_singular_proto3_string_into(wire_type, is, &mut self.token)?;
+                },
+                6 => {
+                    ::protobuf::rt::read_singular_proto3_string_into(wire_type, is, &mut self.owner)?;
+                },
+                7 => {
+                    ::protobuf::rt::read_singular_proto3_string_into(wire_type, is, &mut self.spender)?;
+                },
+                8 => {
+                    ::protobuf::rt::read_singular_proto3_string_into(wire_type, is, &mut self.amount)?;
+                },
+                _ => {
+                    ::protobuf::rt::read_unknown_or_skip_group(field_number, wire_type, is, self.mut_unknown_fields())?;
+                },
+            };
+        }
+        ::std::result::Result::Ok(())
+    }
+
+    // Compute sizes of nested messages
+    #[allow(unused_variables)]
+    fn compute_size(&self) -> u32 {
+        let mut my_size = 0;
+        if self.ts != 0 {
+            my_size += ::protobuf::rt::value_size(1, self.ts, ::protobuf::wire_format::WireTypeVarint);
+        }
+        if self.ttl != 0 {
+            my_size += ::protobuf::rt::value_size(2, self.ttl, ::protobuf::wire_format::WireTypeVarint);
+        }
+        if !self.wallet_id.is_empty() {
+            my_size += ::protobuf::rt::string_size(3, &self.wallet_id);
+        }
+        if self.blockchain != 0 {
+            my_size += ::protobuf::rt::value_size(4, self.blockchain, ::protobuf::wire_format::WireTypeVarint);
+        }
+        if !self.token.is_empty() {
+            my_size += ::protobuf::rt::string_size(5, &self.token);
+        }
+        if !self.owner.is_empty() {
+            my_size += ::protobuf::rt::string_size(6, &self.owner);
+        }
+        if !self.spender.is_empty() {
+            my_size += ::protobuf::rt::string_size(7, &self.spender);
+        }
+        if !self.amount.is_empty() {
+            my_size += ::protobuf::rt::string_size(8, &self.amount);
+        }
+        my_size += ::protobuf::rt::unknown_fields_size(self.get_unknown_fields());
+        self.cached_size.set(my_size);
+        my_size
+    }
+
+    fn write_to_with_cached_sizes(&self, os: &mut ::protobuf::CodedOutputStream<'_>) -> ::protobuf::ProtobufResult<()> {
+        if self.ts != 0 {
+            os.write_uint64(1, self.ts)?;
+        }
+        if self.ttl != 0 {
+            os.write_uint64(2, self.ttl)?;
+        }
+        if !self.wallet_id.is_empty() {
+            os.write_string(3, &self.wallet_id)?;
+        }
+        if self.blockchain != 0 {
+            os.write_uint32(4, self.blockchain)?;
+        }
+        if !self.token.is_empty() {
+            os.write_string(5, &self.token)?;
+        }
+        if !self.owner.is_empty() {
+            os.write_string(6, &self.owner)?;
+        }
+        if !self.spender.is_empty() {
+            os.write_string(7, &self.spender)?;
+        }
+        if !self.amount.is_empty() {
+            os.write_string(8, &self.amount)?;
+        }
+        os.write_unknown_fields(self.get_unknown_fields())?;
+        ::std::result::Result::Ok(())
+    }
+
+    fn get_cached_size(&self) -> u32 {
+        self.cached_size.get()
+    }
+
+    fn get_unknown_fields(&self) -> &::protobuf::UnknownFields {
+        &self.unknown_fields
+    }
+
+    fn mut_unknown_fields(&mut self) -> &mut ::protobuf::UnknownFields {
+        &mut self.unknown_fields
+    }
+
+    fn as_any(&self) -> &dyn (::std::any::Any) {
+        self as &dyn (::std::any::Any)
+    }
+    fn as_any_mut(&mut self) -> &mut dyn (::std::any::Any) {
+        self as &mut dyn (::std::any::Any)
+    }
+    fn into_any(self: ::std::boxed::Box<Self>) -> ::std::boxed::Box<dyn (::std::any::Any)> {
+        self
+    }
+
+    fn descriptor(&self) -> &'static ::protobuf::reflect::MessageDescriptor {
+        Self::descriptor_static()
+    }
+
+    fn new() -> Allowance {
+        Allowance::new()
+    }
+
+    fn descriptor_static() -> &'static ::protobuf::reflect::MessageDescriptor {
+        static descriptor: ::protobuf::rt::LazyV2<::protobuf::reflect::MessageDescriptor> = ::protobuf::rt::LazyV2::INIT;
+        descriptor.get(|| {
+            let mut fields = ::std::vec::Vec::new();
+            fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeUint64>(
+                "ts",
+                |m: &Allowance| { &m.ts },
+                |m: &mut Allowance| { &mut m.ts },
+            ));
+            fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeUint64>(
+                "ttl",
+                |m: &Allowance| { &m.ttl },
+                |m: &mut Allowance| { &mut m.ttl },
+            ));
+            fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeString>(
+                "wallet_id",
+                |m: &Allowance| { &m.wallet_id },
+                |m: &mut Allowance| { &mut m.wallet_id },
+            ));
+            fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeUint32>(
+                "blockchain",
+                |m: &Allowance| { &m.blockchain },
+                |m: &mut Allowance| { &mut m.blockchain },
+            ));
+            fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeString>(
+                "token",
+                |m: &Allowance| { &m.token },
+                |m: &mut Allowance| { &mut m.token },
+            ));
+            fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeString>(
+                "owner",
+                |m: &Allowance| { &m.owner },
+                |m: &mut Allowance| { &mut m.owner },
+            ));
+            fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeString>(
+                "spender",
+                |m: &Allowance| { &m.spender },
+                |m: &mut Allowance| { &mut m.spender },
+            ));
+            fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeString>(
+                "amount",
+                |m: &Allowance| { &m.amount },
+                |m: &mut Allowance| { &mut m.amount },
+            ));
+            ::protobuf::reflect::MessageDescriptor::new_pb_name::<Allowance>(
+                "Allowance",
+                fields,
+                file_descriptor_proto()
+            )
+        })
+    }
+
+    fn default_instance() -> &'static Allowance {
+        static instance: ::protobuf::rt::LazyV2<Allowance> = ::protobuf::rt::LazyV2::INIT;
+        instance.get(Allowance::new)
+    }
+}
+
+impl ::protobuf::Clear for Allowance {
+    fn clear(&mut self) {
+        self.ts = 0;
+        self.ttl = 0;
+        self.wallet_id.clear();
+        self.blockchain = 0;
+        self.token.clear();
+        self.owner.clear();
+        self.spender.clear();
+        self.amount.clear();
+        self.unknown_fields.clear();
+    }
+}
+
+impl ::std::fmt::Debug for Allowance {
+    fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+        ::protobuf::text_format::fmt(self, f)
+    }
+}
+
+impl ::protobuf::reflect::ProtobufValue for Allowance {
+    fn as_ref(&self) -> ::protobuf::reflect::ReflectValueRef {
+        ::protobuf::reflect::ReflectValueRef::Message(self)
+    }
+}
+
 static file_descriptor_proto_data: &'static [u8] = b"\
     \n\rbalance.proto\x12\remerald.state\"\xaa\x01\n\x07Balance\x12\x18\n\
     \x07address\x18\x01\x20\x01(\tR\x07address\x12\x0e\n\x02ts\x18\x02\x20\
@@ -789,43 +1221,75 @@ static file_descriptor_proto_data: &'static [u8] = b"\
     ald.state.UtxoR\x04utxo\"C\n\rBalanceBundle\x122\n\x08balances\x18\x01\
     \x20\x03(\x0b2\x16.emerald.state.BalanceR\x08balances\"F\n\x04Utxo\x12\
     \x12\n\x04txid\x18\x01\x20\x01(\tR\x04txid\x12\x12\n\x04vout\x18\x02\x20\
-    \x01(\rR\x04vout\x12\x16\n\x06amount\x18\x03\x20\x01(\x04R\x06amountJ\
-    \xf9\x05\n\x06\x12\x04\0\0\x16\x01\n\x08\n\x01\x0c\x12\x03\0\0\x12\n\x08\
-    \n\x01\x02\x12\x03\x01\0\x16\n\n\n\x02\x04\0\x12\x04\x03\0\x0b\x01\n\n\n\
-    \x03\x04\0\x01\x12\x03\x03\x08\x0f\n\x0b\n\x04\x04\0\x02\0\x12\x03\x04\
-    \x02\x15\n\x0c\n\x05\x04\0\x02\0\x05\x12\x03\x04\x02\x08\n\x0c\n\x05\x04\
-    \0\x02\0\x01\x12\x03\x04\t\x10\n\x0c\n\x05\x04\0\x02\0\x03\x12\x03\x04\
-    \x13\x14\n\x0b\n\x04\x04\0\x02\x01\x12\x03\x05\x02\x10\n\x0c\n\x05\x04\0\
-    \x02\x01\x05\x12\x03\x05\x02\x08\n\x0c\n\x05\x04\0\x02\x01\x01\x12\x03\
-    \x05\t\x0b\n\x0c\n\x05\x04\0\x02\x01\x03\x12\x03\x05\x0e\x0f\n\x0b\n\x04\
-    \x04\0\x02\x02\x12\x03\x06\x02\x18\n\x0c\n\x05\x04\0\x02\x02\x05\x12\x03\
-    \x06\x02\x08\n\x0c\n\x05\x04\0\x02\x02\x01\x12\x03\x06\t\x13\n\x0c\n\x05\
-    \x04\0\x02\x02\x03\x12\x03\x06\x16\x17\n\x0b\n\x04\x04\0\x02\x03\x12\x03\
-    \x07\x02\x13\n\x0c\n\x05\x04\0\x02\x03\x05\x12\x03\x07\x02\x08\n\x0c\n\
-    \x05\x04\0\x02\x03\x01\x12\x03\x07\t\x0e\n\x0c\n\x05\x04\0\x02\x03\x03\
-    \x12\x03\x07\x11\x12\n\x0b\n\x04\x04\0\x02\x04\x12\x03\x08\x02\x14\n\x0c\
-    \n\x05\x04\0\x02\x04\x05\x12\x03\x08\x02\x08\n\x0c\n\x05\x04\0\x02\x04\
-    \x01\x12\x03\x08\t\x0f\n\x0c\n\x05\x04\0\x02\x04\x03\x12\x03\x08\x12\x13\
-    \n$\n\x04\x04\0\x02\x05\x12\x03\n\x02\x19\x1a\x17\x20optional\x20utxo\
-    \x20details\n\n\x0c\n\x05\x04\0\x02\x05\x04\x12\x03\n\x02\n\n\x0c\n\x05\
-    \x04\0\x02\x05\x06\x12\x03\n\x0b\x0f\n\x0c\n\x05\x04\0\x02\x05\x01\x12\
-    \x03\n\x10\x14\n\x0c\n\x05\x04\0\x02\x05\x03\x12\x03\n\x17\x18\n\n\n\x02\
-    \x04\x01\x12\x04\r\0\x0f\x01\n\n\n\x03\x04\x01\x01\x12\x03\r\x08\x15\n\
-    \x0b\n\x04\x04\x01\x02\0\x12\x03\x0e\x02\x20\n\x0c\n\x05\x04\x01\x02\0\
-    \x04\x12\x03\x0e\x02\n\n\x0c\n\x05\x04\x01\x02\0\x06\x12\x03\x0e\x0b\x12\
-    \n\x0c\n\x05\x04\x01\x02\0\x01\x12\x03\x0e\x13\x1b\n\x0c\n\x05\x04\x01\
-    \x02\0\x03\x12\x03\x0e\x1e\x1f\n\n\n\x02\x04\x02\x12\x04\x11\0\x16\x01\n\
-    \n\n\x03\x04\x02\x01\x12\x03\x11\x08\x0c\n\x0b\n\x04\x04\x02\x02\0\x12\
-    \x03\x12\x02\x12\n\x0c\n\x05\x04\x02\x02\0\x05\x12\x03\x12\x02\x08\n\x0c\
-    \n\x05\x04\x02\x02\0\x01\x12\x03\x12\t\r\n\x0c\n\x05\x04\x02\x02\0\x03\
-    \x12\x03\x12\x10\x11\n\x0b\n\x04\x04\x02\x02\x01\x12\x03\x13\x02\x12\n\
-    \x0c\n\x05\x04\x02\x02\x01\x05\x12\x03\x13\x02\x08\n\x0c\n\x05\x04\x02\
-    \x02\x01\x01\x12\x03\x13\t\r\n\x0c\n\x05\x04\x02\x02\x01\x03\x12\x03\x13\
-    \x10\x11\nE\n\x04\x04\x02\x02\x02\x12\x03\x15\x02\x14\x1a8\x20we\x20use\
-    \x20it\x20only\x20for\x20bitcoin,\x20so\x2064\x20bit\x20number\x20is\x20\
-    enough\n\n\x0c\n\x05\x04\x02\x02\x02\x05\x12\x03\x15\x02\x08\n\x0c\n\x05\
-    \x04\x02\x02\x02\x01\x12\x03\x15\t\x0f\n\x0c\n\x05\x04\x02\x02\x02\x03\
-    \x12\x03\x15\x12\x13b\x06proto3\
+    \x01(\rR\x04vout\x12\x16\n\x06amount\x18\x03\x20\x01(\x04R\x06amount\"\
+    \xc8\x01\n\tAllowance\x12\x0e\n\x02ts\x18\x01\x20\x01(\x04R\x02ts\x12\
+    \x10\n\x03ttl\x18\x02\x20\x01(\x04R\x03ttl\x12\x1b\n\twallet_id\x18\x03\
+    \x20\x01(\tR\x08walletId\x12\x1e\n\nblockchain\x18\x04\x20\x01(\rR\nbloc\
+    kchain\x12\x14\n\x05token\x18\x05\x20\x01(\tR\x05token\x12\x14\n\x05owne\
+    r\x18\x06\x20\x01(\tR\x05owner\x12\x18\n\x07spender\x18\x07\x20\x01(\tR\
+    \x07spender\x12\x16\n\x06amount\x18\x08\x20\x01(\tR\x06amountJ\xbe\n\n\
+    \x06\x12\x04\0\0%\x01\n\x08\n\x01\x0c\x12\x03\0\0\x12\n\x08\n\x01\x02\
+    \x12\x03\x01\0\x16\n\n\n\x02\x04\0\x12\x04\x03\0\x0b\x01\n\n\n\x03\x04\0\
+    \x01\x12\x03\x03\x08\x0f\n\x0b\n\x04\x04\0\x02\0\x12\x03\x04\x02\x15\n\
+    \x0c\n\x05\x04\0\x02\0\x05\x12\x03\x04\x02\x08\n\x0c\n\x05\x04\0\x02\0\
+    \x01\x12\x03\x04\t\x10\n\x0c\n\x05\x04\0\x02\0\x03\x12\x03\x04\x13\x14\n\
+    \x0b\n\x04\x04\0\x02\x01\x12\x03\x05\x02\x10\n\x0c\n\x05\x04\0\x02\x01\
+    \x05\x12\x03\x05\x02\x08\n\x0c\n\x05\x04\0\x02\x01\x01\x12\x03\x05\t\x0b\
+    \n\x0c\n\x05\x04\0\x02\x01\x03\x12\x03\x05\x0e\x0f\n\x0b\n\x04\x04\0\x02\
+    \x02\x12\x03\x06\x02\x18\n\x0c\n\x05\x04\0\x02\x02\x05\x12\x03\x06\x02\
+    \x08\n\x0c\n\x05\x04\0\x02\x02\x01\x12\x03\x06\t\x13\n\x0c\n\x05\x04\0\
+    \x02\x02\x03\x12\x03\x06\x16\x17\n\x0b\n\x04\x04\0\x02\x03\x12\x03\x07\
+    \x02\x13\n\x0c\n\x05\x04\0\x02\x03\x05\x12\x03\x07\x02\x08\n\x0c\n\x05\
+    \x04\0\x02\x03\x01\x12\x03\x07\t\x0e\n\x0c\n\x05\x04\0\x02\x03\x03\x12\
+    \x03\x07\x11\x12\n\x0b\n\x04\x04\0\x02\x04\x12\x03\x08\x02\x14\n\x0c\n\
+    \x05\x04\0\x02\x04\x05\x12\x03\x08\x02\x08\n\x0c\n\x05\x04\0\x02\x04\x01\
+    \x12\x03\x08\t\x0f\n\x0c\n\x05\x04\0\x02\x04\x03\x12\x03\x08\x12\x13\n$\
+    \n\x04\x04\0\x02\x05\x12\x03\n\x02\x19\x1a\x17\x20optional\x20utxo\x20de\
+    tails\n\n\x0c\n\x05\x04\0\x02\x05\x04\x12\x03\n\x02\n\n\x0c\n\x05\x04\0\
+    \x02\x05\x06\x12\x03\n\x0b\x0f\n\x0c\n\x05\x04\0\x02\x05\x01\x12\x03\n\
+    \x10\x14\n\x0c\n\x05\x04\0\x02\x05\x03\x12\x03\n\x17\x18\n\n\n\x02\x04\
+    \x01\x12\x04\r\0\x0f\x01\n\n\n\x03\x04\x01\x01\x12\x03\r\x08\x15\n\x0b\n\
+    \x04\x04\x01\x02\0\x12\x03\x0e\x02\x20\n\x0c\n\x05\x04\x01\x02\0\x04\x12\
+    \x03\x0e\x02\n\n\x0c\n\x05\x04\x01\x02\0\x06\x12\x03\x0e\x0b\x12\n\x0c\n\
+    \x05\x04\x01\x02\0\x01\x12\x03\x0e\x13\x1b\n\x0c\n\x05\x04\x01\x02\0\x03\
+    \x12\x03\x0e\x1e\x1f\n\n\n\x02\x04\x02\x12\x04\x11\0\x16\x01\n\n\n\x03\
+    \x04\x02\x01\x12\x03\x11\x08\x0c\n\x0b\n\x04\x04\x02\x02\0\x12\x03\x12\
+    \x02\x12\n\x0c\n\x05\x04\x02\x02\0\x05\x12\x03\x12\x02\x08\n\x0c\n\x05\
+    \x04\x02\x02\0\x01\x12\x03\x12\t\r\n\x0c\n\x05\x04\x02\x02\0\x03\x12\x03\
+    \x12\x10\x11\n\x0b\n\x04\x04\x02\x02\x01\x12\x03\x13\x02\x12\n\x0c\n\x05\
+    \x04\x02\x02\x01\x05\x12\x03\x13\x02\x08\n\x0c\n\x05\x04\x02\x02\x01\x01\
+    \x12\x03\x13\t\r\n\x0c\n\x05\x04\x02\x02\x01\x03\x12\x03\x13\x10\x11\nE\
+    \n\x04\x04\x02\x02\x02\x12\x03\x15\x02\x14\x1a8\x20we\x20use\x20it\x20on\
+    ly\x20for\x20bitcoin,\x20so\x2064\x20bit\x20number\x20is\x20enough\n\n\
+    \x0c\n\x05\x04\x02\x02\x02\x05\x12\x03\x15\x02\x08\n\x0c\n\x05\x04\x02\
+    \x02\x02\x01\x12\x03\x15\t\x0f\n\x0c\n\x05\x04\x02\x02\x02\x03\x12\x03\
+    \x15\x12\x13\n\n\n\x02\x04\x03\x12\x04\x18\0%\x01\n\n\n\x03\x04\x03\x01\
+    \x12\x03\x18\x08\x11\n\x0b\n\x04\x04\x03\x02\0\x12\x03\x19\x02\x10\n\x0c\
+    \n\x05\x04\x03\x02\0\x05\x12\x03\x19\x02\x08\n\x0c\n\x05\x04\x03\x02\0\
+    \x01\x12\x03\x19\t\x0b\n\x0c\n\x05\x04\x03\x02\0\x03\x12\x03\x19\x0e\x0f\
+    \n\x0b\n\x04\x04\x03\x02\x01\x12\x03\x1a\x02\x11\n\x0c\n\x05\x04\x03\x02\
+    \x01\x05\x12\x03\x1a\x02\x08\n\x0c\n\x05\x04\x03\x02\x01\x01\x12\x03\x1a\
+    \t\x0c\n\x0c\n\x05\x04\x03\x02\x01\x03\x12\x03\x1a\x0f\x10\n\x0b\n\x04\
+    \x04\x03\x02\x02\x12\x03\x1b\x02\x17\n\x0c\n\x05\x04\x03\x02\x02\x05\x12\
+    \x03\x1b\x02\x08\n\x0c\n\x05\x04\x03\x02\x02\x01\x12\x03\x1b\t\x12\n\x0c\
+    \n\x05\x04\x03\x02\x02\x03\x12\x03\x1b\x15\x16\n\x0b\n\x04\x04\x03\x02\
+    \x03\x12\x03\x1c\x02\x18\n\x0c\n\x05\x04\x03\x02\x03\x05\x12\x03\x1c\x02\
+    \x08\n\x0c\n\x05\x04\x03\x02\x03\x01\x12\x03\x1c\t\x13\n\x0c\n\x05\x04\
+    \x03\x02\x03\x03\x12\x03\x1c\x16\x17\n)\n\x04\x04\x03\x02\x04\x12\x03\
+    \x1e\x02\x13\x1a\x1c\x20address\x20of\x20the\x20ERC20\x20token\n\n\x0c\n\
+    \x05\x04\x03\x02\x04\x05\x12\x03\x1e\x02\x08\n\x0c\n\x05\x04\x03\x02\x04\
+    \x01\x12\x03\x1e\t\x0e\n\x0c\n\x05\x04\x03\x02\x04\x03\x12\x03\x1e\x11\
+    \x12\n%\n\x04\x04\x03\x02\x05\x12\x03\x20\x02\x13\x1a\x18\x20who\x20owns\
+    \x20the\x20allowance\n\n\x0c\n\x05\x04\x03\x02\x05\x05\x12\x03\x20\x02\
+    \x08\n\x0c\n\x05\x04\x03\x02\x05\x01\x12\x03\x20\t\x0e\n\x0c\n\x05\x04\
+    \x03\x02\x05\x03\x12\x03\x20\x11\x12\n*\n\x04\x04\x03\x02\x06\x12\x03\"\
+    \x02\x15\x1a\x1d\x20who\x20can\x20spend\x20the\x20allowance\n\n\x0c\n\
+    \x05\x04\x03\x02\x06\x05\x12\x03\"\x02\x08\n\x0c\n\x05\x04\x03\x02\x06\
+    \x01\x12\x03\"\t\x10\n\x0c\n\x05\x04\x03\x02\x06\x03\x12\x03\"\x13\x14\n\
+    )\n\x04\x04\x03\x02\x07\x12\x03$\x02\x14\x1a\x1c\x20amount\x20encoded\
+    \x20as\x20a\x20string\n\n\x0c\n\x05\x04\x03\x02\x07\x05\x12\x03$\x02\x08\
+    \n\x0c\n\x05\x04\x03\x02\x07\x01\x12\x03$\t\x0f\n\x0c\n\x05\x04\x03\x02\
+    \x07\x03\x12\x03$\x12\x13b\x06proto3\
 ";
 
 static file_descriptor_proto_lazy: ::protobuf::rt::LazyV2<::protobuf::descriptor::FileDescriptorProto> = ::protobuf::rt::LazyV2::INIT;

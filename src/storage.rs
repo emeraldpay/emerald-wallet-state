@@ -9,6 +9,7 @@ pub mod xpubpos_store;
 pub(crate) mod trigrams;
 pub mod balance_store;
 pub mod cache_store;
+pub mod allowance_store;
 
 /// Default path (*nix)
 #[cfg(all(

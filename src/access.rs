@@ -5,3 +5,4 @@ pub mod xpubpos;
 mod transactions_merge;
 pub mod balance;
 pub mod cache;
+pub mod allowance;

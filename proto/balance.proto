@@ -21,3 +21,18 @@ message Utxo {
   // we use it only for bitcoin, so 64 bit number is enough
   uint64 amount = 3;
 }
+
+message Allowance {
+  uint64 ts = 1;
+  uint64 ttl = 2;
+  string wallet_id = 3;
+  uint32 blockchain = 4;
+  // address of the ERC20 token
+  string token = 5;
+  // who owns the allowance
+  string owner = 6;
+  // who can spend the allowance
+  string spender = 7;
+  // amount encoded as a string
+  string amount = 8;
+}
