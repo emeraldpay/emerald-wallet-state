@@ -5,6 +5,7 @@ use crate::access::balance::{Balance, Balances, concat};
 use crate::errors::{StateError};
 use crate::proto::balance::{BalanceBundle as proto_BalanceBundle};
 use crate::{validate};
+use crate::storage::version::Migration;
 
 const PREFIX_KEY: &'static str = "balance:";
 
@@ -25,7 +26,21 @@ impl BalanceAccess {
     }
 }
 
-
+impl Migration for BalanceAccess {
+    fn migrate(&self, version: usize) -> Result<(), StateError> {
+        if version == 1 {
+            // before version 1 we may stored some balances without a token and the wallet may show some outdated information, or
+            // information that doesn't exist and therefore cannot be updated by wallet.
+            // Here we just remove all balances, because wallet will reload all actual balances anyway.
+            self.db.scan_prefix(PREFIX_KEY.as_bytes()).keys().for_each(|k| {
+                if let Ok(key) = k {
+                    let _ = self.db.remove(key);
+                }
+            });
+        }
+        Ok(())
+    }
+}
 
 impl Balances for BalanceAccess {
 

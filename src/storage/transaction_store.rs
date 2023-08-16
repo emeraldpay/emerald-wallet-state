@@ -11,6 +11,7 @@ use crate::access::pagination::{PageResult, PageQuery, Cursor};
 use crate::errors::{StateError,InvalidValueError};
 use crate::proto::transactions::{Transaction as proto_Transaction, Cursor as proto_Cursor, TransactionMeta as proto_TransactionMeta, State};
 use crate::storage::indexing::{IndexedValue, QueryRanges, IndexConvert, IndexEncoding, Indexing};
+use crate::storage::version::Migration;
 
 ///
 /// # Storage:
@@ -151,6 +152,21 @@ impl TransactionsAccess {
             }
             Err(_) => None
         }
+    }
+}
+
+impl Migration for TransactionsAccess {
+    fn migrate(&self, version: usize) -> Result<(), StateError> {
+        if version == 1 {
+            // before version 1 we may have some transactions without full details,
+            // here we drop the cursors to ensure all transactions are reloaded
+            self.db.scan_prefix(PREFIX_CURSOR.as_bytes()).keys().for_each(|k| {
+                if let Ok(key) = k {
+                    let _ = self.db.remove(key);
+                }
+            });
+        }
+        Ok(())
     }
 }
 
@@ -460,7 +476,7 @@ mod tests {
         assert_eq!(results.values.len(), 0);
 
         let db_size = access.db.scan_prefix("").count();
-        assert_eq!(db_size, 0);
+        assert_eq!(db_size, 1); // only version field
     }
 
     #[test]

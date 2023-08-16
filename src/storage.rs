@@ -10,6 +10,7 @@ pub(crate) mod trigrams;
 pub mod balance_store;
 pub mod cache_store;
 pub mod allowance_store;
+mod version;
 
 /// Default path (*nix)
 #[cfg(all(

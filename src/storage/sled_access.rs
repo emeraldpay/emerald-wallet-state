@@ -8,6 +8,7 @@ use crate::storage::balance_store::BalanceAccess;
 use crate::storage::cache_store::CacheAccess;
 use crate::storage::default_path;
 use crate::storage::transaction_store::{TransactionsAccess};
+use crate::storage::version::Version;
 use crate::storage::xpubpos_store::XPubPositionAccess;
 
 pub struct SledStorage {
@@ -24,10 +25,20 @@ impl SledStorage {
 
     /// Open DB at the specified path
     pub fn open(path: PathBuf) -> Result<SledStorage, StateError> {
-        let db = sled::open(path)?;
+        let db = Arc::new(sled::open(path)?);
+        let version = Version::new(db.clone());
+        if let Err(e) = version.migrate() {
+            println!("Failed to migrate DB: {:?}", e);
+        }
         Ok(SledStorage {
-            db: Arc::new(db),
+            db,
         })
+    }
+
+    ///
+    /// Open API to access DB version
+    pub fn version(&self) -> Version {
+        Version::new(self.db.clone())
     }
 
     /// Open API to access transactions store
