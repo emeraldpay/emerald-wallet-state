@@ -23,9 +23,13 @@ message Utxo {
 }
 
 message Allowance {
+  // time when the allowance was persisted, in milliseconds
   uint64 ts = 1;
+  // time to live, as a timestamp in milliseconds after which it should be evicted
   uint64 ttl = 2;
+  // associated wallet id
   string wallet_id = 3;
+  // associated blockchain id
   uint32 blockchain = 4;
   // address of the ERC20 token
   string token = 5;
