@@ -37,7 +37,7 @@ impl CacheAccess {
             .or::<StateError>(Ok(0i64))
             .unwrap();
 
-        Utc.timestamp_millis(last_purge).lt(
+        Utc.timestamp_millis_opt(last_purge).unwrap().lt(
             &Utc::now()
                 .checked_sub_signed(Duration::seconds(PURGE_EVERY_SECONDS))
                 .unwrap()
@@ -106,7 +106,7 @@ impl Cache for CacheAccess {
                 Some(entry) => {
                     if let Ok(entry) = entry {
                         let delete = if let Ok(proto) = proto_Cache::parse_from_bytes(entry.1.as_ref()) {
-                            Utc.timestamp_millis(proto.get_ttl() as i64)
+                            Utc.timestamp_millis_opt(proto.get_ttl() as i64).unwrap()
                                 .lt(&Utc::now())
                         } else {
                             // always delete corrupted values

@@ -66,7 +66,7 @@ impl BookItem {
         }
 
         // if it's just a newly created record then fill it with creation/update timestamp
-        let now = Utc::now().naive_utc().timestamp_millis() as u64;
+        let now = Utc::now().timestamp_millis() as u64;
         if copy.get_create_timestamp() == 0 {
             copy.set_create_timestamp(now);
         }
@@ -116,7 +116,7 @@ impl Address {
             Address_AddressType::PLAIN => {
                 match blockchain {
                     BlockchainId::CHAIN_BITCOIN | BlockchainId::CHAIN_TESTNET_BITCOIN => {
-                        let _ = bitcoin::util::address::Address::from_str(self.address.as_str())
+                        let _ = bitcoin::Address::from_str(self.address.as_str())
                             .map_err(|_| InvalidValueError::Other("Invalid address".to_string()))?;
                     },
                     // those are all ethereum blockchains

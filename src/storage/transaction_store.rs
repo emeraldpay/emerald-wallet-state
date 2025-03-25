@@ -115,7 +115,7 @@ impl IndexedValue<IndexType> for proto_Transaction {
 
 impl QueryRanges for Filter {
     fn get_index_bounds(&self) -> (Bound<String>, Bound<String>) {
-        let ts_now = Utc::now().naive_utc().timestamp_millis() as u64;
+        let ts_now = Utc::now().timestamp_millis() as u64;
         let ts_start = 0u64;
 
         if let Some(wallet) = &self.wallet {
@@ -339,7 +339,7 @@ impl Transactions for TransactionsAccess {
             } else {
                 Ok(Some(RemoteCursor {
                     value: cursor.value,
-                    since: Utc.timestamp_millis(cursor.ts as i64)
+                    since: Utc.timestamp_millis_opt(cursor.ts as i64).unwrap()
                 }))
             }
         } else {
@@ -351,7 +351,7 @@ impl Transactions for TransactionsAccess {
         let key = format!("{}:{}", PREFIX_CURSOR, address.as_ref());
         let mut proto = proto_Cursor::new();
         proto.set_address(address.to_string());
-        proto.set_ts(Utc::now().naive_utc().timestamp_millis() as u64);
+        proto.set_ts(Utc::now().timestamp_millis() as u64);
         proto.set_value(cursor.to_string());
         let value = proto.write_to_bytes()?;
         let mut batch = Batch::default();

@@ -54,14 +54,14 @@ impl QueryRanges for Filter {
         if let Some(text) = &self.text {
             if let Some(b) = Trigram::search_bound(&text) {
                 let start = IndexType::ByTrigram(b.clone(), 0).get_index_key();
-                let now = IndexType::ByTrigram(b, Utc::now().naive_utc().timestamp_millis() as u64).get_index_key();
+                let now = IndexType::ByTrigram(b, Utc::now().timestamp_millis() as u64).get_index_key();
                 // timestamp index is built on descending order
                 return (Bound::Included(now), Bound::Included(start))
             }
         }
 
         // just scan everythign for other queries
-        let now = IndexType::Everything(Utc::now().naive_utc().timestamp_millis() as u64).get_index_key();
+        let now = IndexType::Everything(Utc::now().timestamp_millis() as u64).get_index_key();
         let start = IndexType::Everything(0).get_index_key();
         // timestamp index is built on descending order
         (Bound::Included(now), Bound::Included(start))
@@ -285,7 +285,7 @@ impl AddressBook for AddressBookAccess {
         batch.remove(item_key.as_bytes());
         Indexing::remove_backref(item_key, self.db.clone(), &mut batch)?;
 
-        let now = Utc::now().naive_utc().timestamp_millis() as u64;
+        let now = Utc::now().timestamp_millis() as u64;
 
         let mut item = update.clone();
         item.set_update_timestamp(now);
@@ -653,7 +653,7 @@ mod tests {
         let access = SledStorage::open(tmp_dir.path().to_path_buf()).unwrap();
         let store = access.get_addressbook();
 
-        let ts_start = Utc::now().naive_utc().timestamp_millis() as u64;
+        let ts_start = Utc::now().timestamp_millis() as u64;
 
         let mut item = proto_BookItem::new();
         item.blockchain = 101;
@@ -668,7 +668,7 @@ mod tests {
         updated.label = "Hello World!".to_string();
         store.update(id, updated.clone()).expect("not updated");
 
-        let ts_end = Utc::now().naive_utc().timestamp_millis() as u64;
+        let ts_end = Utc::now().timestamp_millis() as u64;
 
         let exp = updated.clone();
 

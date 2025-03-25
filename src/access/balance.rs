@@ -94,7 +94,7 @@ impl TryFrom<&proto_Balance> for Balance {
         Ok(Balance {
             amount: BigUint::from_str(value.amount.as_str())
                 .map_err(|_| StateError::CorruptedValue)?,
-            ts: Utc.timestamp_millis(value.ts as i64),
+            ts: Utc.timestamp_millis_opt(value.ts as i64).unwrap(),
             address: value.address.clone(),
             blockchain: value.blockchain,
             asset: value.asset.clone(),

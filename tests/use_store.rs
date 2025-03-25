@@ -61,7 +61,7 @@ fn write_multiple() {
         blockchain: 1,
         asset: "BTC".to_string(),
         amount: BigUint::from(23045u64),
-        ts: Utc.timestamp_millis(1675123456789),
+        ts: Utc.timestamp_millis_opt(1675123456789).unwrap(),
         utxo: vec![
             Utxo {
                 txid: "01ff3e2b6d2f1e52aa548e79b8f43d0091e9541bc4f70cda4e6549aaf836268b".to_string(),

@@ -1,7 +1,7 @@
 [package]
 name = "emerald-wallet-state"
 version = "0.3.0-dev"
-edition = "2021"
+edition = "2024"
 license = "Apache-2.0"
 authors = ["Igor Artamonov", "Emerald Team"]
 description = "Emerald Wallet State storage"
@@ -11,23 +11,21 @@ documentation = "https://docs.rs/emerald-wallet-state"
 readme = "crates.md"
 
 [dependencies]
-emerald-vault = "0.33.0"
+#emerald-vault = "0.33.0"
 #emerald-vault = { path = "../emerald-rs" }
-#emerald-vault = { git = "https://github.com/emeraldpay/emerald-vault", branch = "master" }
+emerald-vault = { git = "https://github.com/emeraldpay/emerald-vault", branch = "master" }
 
 chrono = "0.4"
-uuid = { version = "0.8", features = ["v4"] }
+uuid = { version = "1.2.2", features = ["v4"] }
 sled = "0.34"
 protobuf = { version = "2.25", features = ["with-bytes"] }
-enum-display-derive = "0.1"
-fs_extra = "1.2"
 regex = "1.6"
-bitcoin = "0.29"
-num-bigint = "0.4.3"
-num-traits = "0.2.15"
+bitcoin = "0.32"
+num-bigint = "0.4"
+num-traits = "0.2"
 hex = "0.4"
-lazy_static = "1.4.0"
+lazy_static = "1.5"
 
 [dev-dependencies]
 tempdir = "0.3"
-zip-extract = "0.1.2"
+zip-extract = "0.2"

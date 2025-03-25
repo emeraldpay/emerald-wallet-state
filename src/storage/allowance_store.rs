@@ -27,7 +27,7 @@ impl AllowanceAccess {
         while let Some(entry) = iter.next() {
             if let Ok(entry) = &entry {
                 let delete = if let Ok(allowance) = Allowance::parse_from_bytes(entry.1.as_ref()) {
-                    allowance.ttl < Utc::now().naive_utc().timestamp_millis() as u64
+                    allowance.ttl < Utc::now().timestamp_millis() as u64
                 } else {
                     // always delete invalid entries
                     true
@@ -58,7 +58,7 @@ impl Allowances for AllowanceAccess {
             .map_err(|_| InvalidValueError::Name("wallet_id".to_string()))?;
 
         let mut allowance = allowance.clone();
-        allowance.ts = Utc::now().naive_utc().timestamp_millis() as u64;
+        allowance.ts = Utc::now().timestamp_millis() as u64;
         allowance.ttl = allowance.ts + ttl.or(Some(DEFAULT_TTL))
             .map(|v| if v > MAX_TTL { MAX_TTL } else { v })
             .unwrap();
@@ -81,7 +81,7 @@ impl Allowances for AllowanceAccess {
         while let Some(entry) = iter.next() {
             if let Ok(next) = entry {
                 if let Ok(allowance) = Allowance::parse_from_bytes(next.1.as_ref()) {
-                    if allowance.ttl < Utc::now().naive_utc().timestamp_millis() as u64 {
+                    if allowance.ttl < Utc::now().timestamp_millis() as u64 {
                         outdated += 1;
                         continue;
                     }
@@ -272,7 +272,7 @@ mod tests {
         let access = SledStorage::open(tmp_dir.path().to_path_buf()).unwrap();
         let store = access.get_allowance();
 
-        let ts_0 = Utc::now().naive_utc().timestamp_millis() as u64;
+        let ts_0 = Utc::now().timestamp_millis() as u64;
 
         let mut item_1 = Allowance::new();
         item_1.wallet_id = "5e0e8fb5-9ffb-4b18-b79a-b732d19576f3".to_string();
@@ -284,7 +284,7 @@ mod tests {
         let _ = store.add(item_1.clone(), None).unwrap();
 
         thread::sleep(Duration::from_millis(50));
-        let ts_1 = Utc::now().naive_utc().timestamp_millis() as u64;
+        let ts_1 = Utc::now().timestamp_millis() as u64;
 
         let mut item_2 = Allowance::new();
         item_2.wallet_id = "5e0e8fb5-9ffb-4b18-b79a-b732d19576f3".to_string();
@@ -297,7 +297,7 @@ mod tests {
         let _ = store.add(item_2.clone(), None).unwrap();
 
         thread::sleep(Duration::from_millis(50));
-        let ts_2 = Utc::now().naive_utc().timestamp_millis() as u64;
+        let ts_2 = Utc::now().timestamp_millis() as u64;
 
 
         let removed = store.remove(Uuid::from_str("5e0e8fb5-9ffb-4b18-b79a-b732d19576f3").unwrap(), None, Some(ts_0)).unwrap();

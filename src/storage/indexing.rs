@@ -21,7 +21,7 @@ impl Indexing {
         let value = index_backref.write_to_bytes()?;
         batch.insert(
             // we can expect multiple updates of the `target_key` with different indexes, so we track all versions of them by timestamping each
-            format!("{}{}/{}", IDX_BACKREF, target_key, Utc::now().naive_utc().timestamp_millis() as u64).as_bytes(),
+            format!("{}{}/{}", IDX_BACKREF, target_key, Utc::now().timestamp_millis() as u64).as_bytes(),
             value.as_slice(),
         );
         Ok(())
