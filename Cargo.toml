@@ -1,6 +1,6 @@
 [package]
 name = "emerald-wallet-state"
-version = "0.2.1"
+version = "0.3.0-dev"
 edition = "2021"
 license = "Apache-2.0"
 authors = ["Igor Artamonov", "Emerald Team"]
