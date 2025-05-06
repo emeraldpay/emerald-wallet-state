@@ -1,6 +1,6 @@
 [package]
 name = "emerald-wallet-state"
-version = "0.3.0-dev"
+version = "0.3.0"
 edition = "2024"
 license = "Apache-2.0"
 authors = ["Igor Artamonov", "Emerald Team"]
@@ -11,9 +11,9 @@ documentation = "https://docs.rs/emerald-wallet-state"
 readme = "crates.md"
 
 [dependencies]
-#emerald-vault = "0.33.0"
+emerald-vault = "0.35"
 #emerald-vault = { path = "../emerald-rs" }
-emerald-vault = { git = "https://github.com/emeraldpay/emerald-vault", branch = "master" }
+#emerald-vault = { git = "https://github.com/emeraldpay/emerald-vault", branch = "master" }
 
 chrono = "0.4"
 uuid = { version = "1.2.2", features = ["v4"] }
